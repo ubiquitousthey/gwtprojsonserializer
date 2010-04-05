@@ -33,8 +33,7 @@ public class Serializer
 		return typeName.toLowerCase();
 	}
 
-	// TODO: implement this methods to get proper serializer from context and call proper method
-	String serialize(Object pojo) {
+	public String serialize(Object pojo) {
 		String name = getTypeName(pojo);
 		ObjectSerializer serializer = getObjectSerializer(name);
 		if( serializer == null ){
@@ -43,7 +42,7 @@ public class Serializer
 		return serializer.serialize(pojo);
 	}
 
-	JSONValue serializeToJson(Object pojo) {
+	public JSONValue serializeToJson(Object pojo) {
 		String name = getTypeName(pojo);
 		ObjectSerializer serializer = getObjectSerializer(name);
 		if( serializer == null ){
@@ -52,7 +51,7 @@ public class Serializer
 		return serializer.serializeToJson(pojo);
 	}
 
-	Object deSerialize(JSONValue jsonValue, String className) throws JSONException {
+	public Object deSerialize(JSONValue jsonValue, String className) throws JSONException {
 		ObjectSerializer serializer = getObjectSerializer(className);
 		if( serializer == null ){
 			throw new SerializationException("Can't find object serializer for " + className);
@@ -60,7 +59,7 @@ public class Serializer
 		return serializer.deSerialize(jsonValue, className);
 	}
 
-	Object deSerialize(String jsonString, String className) throws JSONException {
+	public Object deSerialize(String jsonString, String className) throws JSONException {
 		ObjectSerializer serializer = getObjectSerializer(className);
 		if( serializer == null ){
 			throw new SerializationException("Can't find object serializer for " + className);
