@@ -7,11 +7,9 @@ import com.google.gwt.core.client.EntryPoint;
  */
 public class GWTProJsonSerializer implements EntryPoint {
 
-	/**
-	 * This is the entry point method.
-	 */
-	public void onModuleLoad() {
-		
-	}
-	
+    /**
+     * This is the entry point method.
+     */
+    public void onModuleLoad() {
+    }
 }

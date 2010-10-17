@@ -3,57 +3,57 @@ package com.kfuntak.gwt.json.serialization.client.domain;
 import com.kfuntak.gwt.json.serialization.client.JsonSerializable;
 
 public class PhoneNumber implements JsonSerializable {
-	private String number;
-	private String ext;
-	private String type;
-	private String listedStatus;
 
-	public String getNumber() {
-		return number;
-	}
+    private String number;
+    private String ext;
+    private String type;
+    private String listedStatus;
 
-	public void setNumber(String number) {
-		this.number = number;
-	}
+    public String getNumber() {
+        return number;
+    }
 
-	public String getExt() {
-		return ext;
-	}
+    public void setNumber(String number) {
+        this.number = number;
+    }
 
-	public void setExt(String ext) {
-		this.ext = ext;
-	}
+    public String getExt() {
+        return ext;
+    }
 
-	public String getType() {
-		return type;
-	}
+    public void setExt(String ext) {
+        this.ext = ext;
+    }
 
-	public void setType(String type) {
-		this.type = type;
-	}
+    public String getType() {
+        return type;
+    }
 
-	public String getListedStatus() {
-		return listedStatus;
-	}
+    public void setType(String type) {
+        this.type = type;
+    }
 
-	public void setListedStatus(String listedStatus) {
-		this.listedStatus = listedStatus;
-	}
+    public String getListedStatus() {
+        return listedStatus;
+    }
 
-	@Override
-	public String toString() {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append("{");
-		buffer.append("number:");
-		buffer.append(number + ",");
-		buffer.append("ext:");
-		buffer.append(ext + ",");
-		buffer.append("type:");
-		buffer.append(type + ",");
-		buffer.append("listedStatus:");
-		buffer.append(listedStatus + ",");
-		buffer.append("}");
-		return buffer.toString();
-	}
+    public void setListedStatus(String listedStatus) {
+        this.listedStatus = listedStatus;
+    }
 
+    @Override
+    public String toString() {
+        StringBuffer buffer = new StringBuffer();
+        buffer.append("{");
+        buffer.append("number:");
+        buffer.append(number + ",");
+        buffer.append("ext:");
+        buffer.append(ext + ",");
+        buffer.append("type:");
+        buffer.append(type + ",");
+        buffer.append("listedStatus:");
+        buffer.append(listedStatus + ",");
+        buffer.append("}");
+        return buffer.toString();
+    }
 }

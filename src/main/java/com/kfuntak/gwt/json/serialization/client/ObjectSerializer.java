@@ -4,13 +4,12 @@ import com.google.gwt.json.client.JSONException;
 import com.google.gwt.json.client.JSONValue;
 
 public interface ObjectSerializer {
-	
-	String serialize(Object pojo);
 
-	JSONValue serializeToJson(Object pojo);
+    String serialize(Object pojo);
 
-	Object deSerialize(JSONValue jsonValue, String className) throws JSONException;
+    JSONValue serializeToJson(Object pojo);
 
-	Object deSerialize(String jsonString, String className) throws JSONException;
-	
+    Object deSerialize(JSONValue jsonValue, String className) throws JSONException;
+
+    Object deSerialize(String jsonString, String className) throws JSONException;
 }
