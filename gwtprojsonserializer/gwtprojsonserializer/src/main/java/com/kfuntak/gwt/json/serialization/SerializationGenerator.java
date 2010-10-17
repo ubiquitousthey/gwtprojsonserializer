@@ -396,7 +396,15 @@ public class SerializationGenerator extends Generator
 			importsList.add(fieldClassType.getQualifiedSourceName());
 			buffer.append("serializer = GWT.create(Serializer.class);");
 			buffer.append("\n");
+			buffer.append("JSONValue _class = ((JSONObject)fieldJsonValue).get(\"class\");");
+			buffer.append("\n");
+			buffer.append("if (_class != null && _class instanceof JSONString) {");
+			buffer.append("\n");
+			buffer.append(fieldColName + ".add((" + fieldClassType.getSimpleSourceName() + ")serializer.deSerialize(fieldJsonValue, ((JSONString)_class).stringValue()));");
+			buffer.append("\n");
+			buffer.append("} else {");
 			buffer.append(fieldColName + ".add((" + fieldClassType.getSimpleSourceName() + ")serializer.deSerialize(fieldJsonValue, \"" + fieldClassType.getQualifiedSourceName() + "\"));");
+			buffer.append("}");
 			buffer.append("\n");
 		} else if (fieldClassType.getQualifiedSourceName().equals("java.lang.String")) {
 			buffer.append(fieldColName + ".add(DeserializerHelper.getString(fieldJsonValue));");
