@@ -312,6 +312,8 @@ public class SerializationGenerator extends Generator
 		buffer.append("\n");
 		buffer.append("mainResult.set" + fieldNameForGS + "(null);");
 		buffer.append("\n");
+        buffer.append("return mainResult;");
+		buffer.append("\n");
 		buffer.append("}");
 		buffer.append("\n");
 
@@ -512,6 +514,9 @@ public class SerializationGenerator extends Generator
 					fieldClassType = parameterizedType.getTypeArgs()[0];
 					importsList.add(fieldClassType.getQualifiedSourceName());
 					String fieldSimpleName = fieldClassType.getSimpleSourceName();
+                    buffer.append("\n");
+					buffer.append("if(fieldValue != null){");
+					buffer.append("\n");
 					buffer.append("Collection<" + fieldSimpleName + "> " + fieldSimpleName.toLowerCase() + "ColValue=(Collection<" + fieldSimpleName + ">)fieldValue;");
 					buffer.append("\n");
 					buffer.append("jsonResultArray=new JSONArray();");
@@ -556,6 +561,8 @@ public class SerializationGenerator extends Generator
 					buffer.append("}");
 					buffer.append("\n");
 					buffer.append("mainResult.put(\"" + fieldName + "\",jsonResultArray);");
+					buffer.append("\n");
+                    buffer.append("}");
 					buffer.append("\n");
 				} else if (fieldClassType.getQualifiedSourceName().equals("java.lang.String")) {
 					buffer.append("jsonValue=SerializerHelper.getString((String)fieldValue);");
