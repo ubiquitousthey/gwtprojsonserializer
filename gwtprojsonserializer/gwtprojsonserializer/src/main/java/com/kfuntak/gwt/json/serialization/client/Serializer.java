@@ -3,7 +3,6 @@ package com.kfuntak.gwt.json.serialization.client;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.google.gwt.core.client.GWT;
 import com.google.gwt.json.client.JSONException;
 import com.google.gwt.json.client.JSONValue;
 
@@ -28,9 +27,12 @@ public class Serializer
 	}
 	
 	static protected String getTypeName( Object obj ){
-		String typeName = GWT.getTypeName( obj );
-		typeName = typeName.substring(typeName.lastIndexOf('.')+1);
-		return typeName.toLowerCase();
+        // WARNING: GWT.getTypeName is deprecated
+		//String typeName = GWT.getTypeName( obj );
+		//typeName = typeName.substring(typeName.lastIndexOf('.')+1);
+		//return typeName.toLowerCase();
+        String typeName = obj.getClass().getName();
+		return typeName;
 	}
 
 	public String serialize(Object pojo) {
