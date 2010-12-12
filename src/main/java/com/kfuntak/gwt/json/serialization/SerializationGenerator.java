@@ -476,14 +476,23 @@ public class SerializationGenerator extends Generator {
         // Serialise fields
         List<JField> allFields = new ArrayList<JField>();
         JField[] fields = baseType.getFields();
-        allFields.addAll(Arrays.asList(fields));
+        for (JField field : fields) {
+            if (!field.isStatic() && !field.isTransient()) {
+                allFields.add(field);
+            }
+        }
         if (baseType.isAssignableTo(typeOracle.getType("com.kfuntak.gwt.json.serialization.client.JsonSerializable"))) {
             boolean flag = true;
             JClassType superClassType = baseType;
             while (flag) {
                 superClassType = superClassType.getSuperclass();
                 if (superClassType.isAssignableTo(typeOracle.getType("com.kfuntak.gwt.json.serialization.client.JsonSerializable"))) {
-                    allFields.addAll(Arrays.asList(superClassType.getFields()));
+                    JField[] subClassFields = superClassType.getFields();
+                    for (JField subClassField : subClassFields) {
+                        if (!subClassField.isStatic() && !subClassField.isTransient()) {
+                            allFields.add(subClassField);
+                        }
+                    }
                 } else {
                     flag = false;
                 }
