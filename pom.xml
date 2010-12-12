@@ -12,7 +12,9 @@ This JSON serializer allows easy connecting GWT client side to any standard serv
     <version>1.0.2</version>
     <url>http://gwtprojsonserializer.googlecode.com</url>
     <scm>
-        <url>http://gwtprojsonserializer.googlecode.com/svn</url>
+        <connection>scm:svn:http://gwtprojsonserializer.googlecode.com/svn/trunk</connection>
+        <developerConnection>scm:svn:https://gwtprojsonserializer.googlecode.com/svn/trunk</developerConnection>
+        <url>http://gwtprojsonserializer.googlecode.com/svn/trunk</url>
     </scm>
 
     <properties>
