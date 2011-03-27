@@ -318,7 +318,7 @@ public class SerializationGenerator extends Generator {
 
     private void deserializeCollection(StringBuffer buffer, JClassType fieldClassType, String fieldNameForGS, String fieldName) throws NotFoundException {
         // Return null if JSON object is null
-        buffer.append("if(fieldJsonValue==null){");
+        buffer.append("if(fieldJsonValue==null || fieldJsonValue instanceof JSONNull){");
         buffer.append("\n");
         buffer.append("mainResult.set" + fieldNameForGS + "(null);");
         buffer.append("\n");
