@@ -46,6 +46,7 @@ public class SerializationGenerator extends Generator {
 
         //get class from type oracle
         JClassType serializeClass = typeOracle.findType(requestedClass);
+
         if (serializeClass == null) {
             logger.log(TreeLogger.ERROR, "Unable to find metadata for type '"
                     + requestedClass + "'", null);
@@ -106,6 +107,9 @@ public class SerializationGenerator extends Generator {
 
         //create a serializer for each interface that supports Serializable
         for (int i = 0; i < subTypes.length; ++i) {
+            if (subTypes[i].isAbstract()) {
+                continue;
+            }
             srcWriter.println("public class " + subTypes[i].getName() + "_SerializableImpl implements ObjectSerializer{");
 //					System.out.println("public class "+subTypes[i].getName()+"_SerializableImpl implements ObjectSerializer{");
             srcWriter.indent();
@@ -144,6 +148,9 @@ public class SerializationGenerator extends Generator {
 //		System.out.println("public "+className+"(){");
         srcWriter.indent();
         for (int i = 0; i < subTypes.length; ++i) {
+            if (subTypes[i].isAbstract()) {
+                continue;
+            }
             srcWriter.println("addObjectSerializer(\"" + subTypes[i].getQualifiedSourceName() + "\", new " + subTypes[i].getName() + "_SerializableImpl() );");
 //					System.out.println("addObjectSerializer(\""+subTypes[i].getQualifiedSourceName()+"\", new "+subTypes[i].getName()+"_SerializableImpl() );");
         }
