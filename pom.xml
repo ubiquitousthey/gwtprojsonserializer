@@ -81,9 +81,9 @@ This JSON serializer allows easy connecting GWT client side to any standard serv
     <build>
         <extensions>
             <extension>
-                <groupId>org.jvnet.wagon-svn</groupId>
-                <artifactId>wagon-svn</artifactId>
-                <version>1.9</version>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-webdav-jackrabbit</artifactId>
+                <version>1.0-beta-7</version>
             </extension>
         </extensions>
         <resources>
