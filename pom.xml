@@ -8,12 +8,12 @@
 It is crucial functionality when there is no GWT-RPC on server side.
 This JSON serializer allows easy connecting GWT client side to any standard server side technology.
     </description>
-    <version>1.0.4</version>
+    <version>1.0.5-SNAPSHOT</version>
     <url>http://gwtprojsonserializer.googlecode.com</url>
     <scm>
-        <connection>scm:svn:http://gwtprojsonserializer.googlecode.com/svn/tags/gwtprojsonserializer-1.0.4</connection>
-        <developerConnection>scm:svn:https://gwtprojsonserializer.googlecode.com/svn/tags/gwtprojsonserializer-1.0.4</developerConnection>
-        <url>http://gwtprojsonserializer.googlecode.com/svn/tags/gwtprojsonserializer-1.0.4</url>
+        <connection>scm:svn:http://gwtprojsonserializer.googlecode.com/svn/trunk</connection>
+        <developerConnection>scm:svn:https://gwtprojsonserializer.googlecode.com/svn/trunk</developerConnection>
+        <url>http://gwtprojsonserializer.googlecode.com/svn/trunk</url>
     </scm>
 
     <properties>
