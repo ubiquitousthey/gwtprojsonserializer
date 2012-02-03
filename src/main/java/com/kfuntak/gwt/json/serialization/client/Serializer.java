@@ -3,8 +3,11 @@ package com.kfuntak.gwt.json.serialization.client;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.json.client.JSONException;
+import com.google.gwt.json.client.JSONParser;
 import com.google.gwt.json.client.JSONValue;
+import com.google.gwt.json.client.JSONObject;
 
 public class Serializer {
 
@@ -22,6 +25,11 @@ public class Serializer {
     }
 
     protected ObjectSerializer getObjectSerializer(String name) {
+        if (name.equals("java.util.ArrayList")) {
+            return new ArrayListSerializer();
+        } else if (name.equals("java.util.HashMap")) {
+            return new HashMapSerializer();
+        }
         return (ObjectSerializer) serializableTypes().get(name);
     }
 
@@ -47,6 +55,10 @@ public class Serializer {
     }
 
     public JSONValue serializeToJson(Object pojo) {
+        if (pojo == null) {
+            return null;
+        }
+
         String name = getTypeName(pojo);
         ObjectSerializer serializer = getObjectSerializer(name);
         if (serializer == null) {
@@ -69,5 +81,20 @@ public class Serializer {
             throw new SerializationException("Can't find object serializer for " + className);
         }
         return serializer.deSerialize(jsonString, className);
+    }
+
+    public Object deSerialize(String jsonString) {
+        return deSerialize(JSONParser.parseLenient(jsonString));
+    }
+
+    public Object deSerialize(JSONValue jsonValue) {
+        JSONObject obj = jsonValue.isObject();
+        if (obj != null) {
+            if (obj.containsKey("class") && obj.get("class").isString() != null) {
+                return deSerialize(jsonValue, obj.get("class").isString().stringValue());
+            }
+        }
+
+        throw new IllegalArgumentException("Json string must contain \"class\" key.");
     }
 }

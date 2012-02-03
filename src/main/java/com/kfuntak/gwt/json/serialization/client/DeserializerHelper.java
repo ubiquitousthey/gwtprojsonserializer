@@ -2,12 +2,8 @@ package com.kfuntak.gwt.json.serialization.client;
 
 import java.util.Date;
 
-import com.google.gwt.json.client.JSONBoolean;
-import com.google.gwt.json.client.JSONException;
-import com.google.gwt.json.client.JSONNull;
-import com.google.gwt.json.client.JSONNumber;
-import com.google.gwt.json.client.JSONString;
-import com.google.gwt.json.client.JSONValue;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.json.client.*;
 
 public class DeserializerHelper {
 
@@ -139,5 +135,44 @@ public class DeserializerHelper {
             }
         }
         return new Date(new Double(((JSONNumber) value).doubleValue()).longValue());
+    }
+
+    public static Object getValue(JSONValue value) {
+        if (value == null || value instanceof JSONNull) {
+            return null;
+        }
+
+        if (value.isNumber() != null) {
+            return getDouble(value);
+        } else if (value.isBoolean() != null) {
+            return getBoolean(value);
+        } else if (value.isArray() != null) {
+            return getArrayList(value);
+        } else if (value.isString() != null) {
+            return value.isString().stringValue();
+        } else if (value.isObject() != null) {
+            JSONObject obj = value.isObject();
+            if (obj.containsKey("class")) {
+                return getObject(obj);
+            } else {
+                return getMap(obj);
+            }
+        }
+        return value.toString();
+    }
+
+    private static Object getObject(JSONObject obj) {
+        Serializer serializer = GWT.create(Serializer.class);
+        return serializer.deSerialize(obj);
+    }
+
+    private static Object getMap(JSONObject obj) {
+        Serializer serializer = GWT.create(Serializer.class);
+        return serializer.deSerialize(obj, "java.util.ArrayList");
+    }
+
+    private static Object getArrayList(JSONValue value) {
+        Serializer serializer = GWT.create(Serializer.class);
+        return serializer.deSerialize(value, "java.util.HashMap");
     }
 }

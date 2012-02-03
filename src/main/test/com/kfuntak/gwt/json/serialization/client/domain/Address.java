@@ -2,14 +2,34 @@ package com.kfuntak.gwt.json.serialization.client.domain;
 
 import com.kfuntak.gwt.json.serialization.client.JsonSerializable;
 
-public class Address implements JsonSerializable {
+import java.lang.String;
+import java.util.HashMap;
 
+public class Address implements JsonSerializable {
     private String line1;
     private String line2;
     private String city;
     private String state;
     private String country;
     private String zipCode;
+    private HashMap<String, String> phoneNumbers = new HashMap<String, String>();
+    private AddressType type = AddressType.HOME;
+
+    public AddressType getType() {
+        return type;
+    }
+
+    public void setType(AddressType type) {
+        this.type = type;
+    }
+
+    public HashMap<String, String> getPhoneNumbers() {
+        return phoneNumbers;
+    }
+
+    public void setPhoneNumbers(HashMap<String, String> phoneNumbers) {
+        this.phoneNumbers = phoneNumbers;
+    }
 
     public String getLine1() {
         return line1;
@@ -75,6 +95,10 @@ public class Address implements JsonSerializable {
         buffer.append(country + ",");
         buffer.append("zipCode:");
         buffer.append(zipCode + ",");
+        buffer.append("phoneNumbers : {");
+        buffer.append("office : \"123-123-1234\",");
+        buffer.append("fax : \"123-123-1235\"");
+        buffer.append("}");
         buffer.append("}");
         return buffer.toString();
     }

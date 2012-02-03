@@ -2,6 +2,7 @@ package com.kfuntak.gwt.json.serialization.client.domain;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 import com.kfuntak.gwt.json.serialization.client.JsonSerializable;
 
@@ -14,7 +15,7 @@ public class School implements JsonSerializable {
     protected String schoolUrl;
     protected int status;
     protected List<String> gradeLevels;
-    protected List<Contact> contactInfo;
+    protected Set<Contact> contactInfo;
     protected Date startDate;
 
     public String getRefIdKey() {
@@ -99,11 +100,11 @@ public class School implements JsonSerializable {
         return true;
     }
 
-    public void setContactInfo(List<Contact> contactInfo) {
+    public void setContactInfo(Set<Contact> contactInfo) {
         this.contactInfo = contactInfo;
     }
 
-    public List<Contact> getContactInfo() {
+    public Set<Contact> getContactInfo() {
         return contactInfo;
     }
 

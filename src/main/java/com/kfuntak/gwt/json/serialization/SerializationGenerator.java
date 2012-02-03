@@ -1,10 +1,7 @@
 package com.kfuntak.gwt.json.serialization;
 
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import com.google.gwt.core.ext.Generator;
 import com.google.gwt.core.ext.GeneratorContext;
@@ -17,30 +14,54 @@ import com.google.gwt.core.ext.typeinfo.JPrimitiveType;
 import com.google.gwt.core.ext.typeinfo.JType;
 import com.google.gwt.core.ext.typeinfo.NotFoundException;
 import com.google.gwt.core.ext.typeinfo.TypeOracle;
+import com.google.gwt.dev.javac.typemodel.JEnumConstant;
+import com.google.gwt.dev.javac.typemodel.JEnumType;
 import com.google.gwt.user.rebind.ClassSourceFileComposerFactory;
 import com.google.gwt.user.rebind.SourceWriter;
-import com.kfuntak.gwt.json.serialization.client.DeserializerHelper;
-import com.kfuntak.gwt.json.serialization.client.IncompatibleObjectException;
-import com.kfuntak.gwt.json.serialization.client.JsonSerializable;
-import com.kfuntak.gwt.json.serialization.client.ObjectSerializer;
-import com.kfuntak.gwt.json.serialization.client.SerializerHelper;
+import com.kfuntak.gwt.json.serialization.client.*;
 
 public class SerializationGenerator extends Generator {
 
-    private JClassType serializeInterface;
     private JClassType stringClass;
     private SourceWriter srcWriter;
     private String className;
     private TypeOracle typeOracle;
-    private Set<String> importsList = new HashSet<String>();
+    private boolean DEBUG = false;
+    private JClassType MARKER_INTERFACE;
+    private String indention = "";
+    private int suffixIndex = 0;
+
+    public SerializationGenerator() throws NotFoundException {
+    }
+
+    public void writeLn(String code) {
+        srcWriter.println(code);
+        if (DEBUG) {
+            System.out.println(indention + code);
+        }
+    }
+
+    public void indent() {
+        srcWriter.indent();
+        indention += "    ";
+    }
+
+    public void outdent() {
+        srcWriter.outdent();
+        indention = indention.substring(0, indention.length() - 4);
+    }
 
     public String generate(TreeLogger logger, GeneratorContext ctx,
             String requestedClass) throws UnableToCompleteException {
         //get the type oracle
         typeOracle = ctx.getTypeOracle();
+        try {
+            MARKER_INTERFACE = typeOracle.getType("com.kfuntak.gwt.json.serialization.client.JsonSerializable");
+        } catch (NotFoundException e) {
+            throw new UnableToCompleteException();
+        }
         assert (typeOracle != null);
-        serializeInterface = typeOracle.findType(JsonSerializable.class.getName());
-        assert (serializeInterface != null);
+        assert (MARKER_INTERFACE != null);
         stringClass = typeOracle.findType(String.class.getName());
         assert (stringClass != null);
 
@@ -64,41 +85,7 @@ public class SerializationGenerator extends Generator {
                 new ClassSourceFileComposerFactory(packageName, className);
         composerFactory.setSuperclass("com.kfuntak.gwt.json.serialization.client.Serializer");
 
-//		// Java imports
-        composerFactory.addImport(java.util.Collection.class.getName());
-        composerFactory.addImport(java.util.List.class.getName());
-        composerFactory.addImport(java.util.ArrayList.class.getName());
-        composerFactory.addImport(java.util.LinkedList.class.getName());
-        composerFactory.addImport(java.util.Stack.class.getName());
-        composerFactory.addImport(java.util.Vector.class.getName());
-        composerFactory.addImport(java.util.Set.class.getName());
-        composerFactory.addImport(java.util.TreeSet.class.getName());
-        composerFactory.addImport(java.util.HashSet.class.getName());
-        composerFactory.addImport(java.util.LinkedHashSet.class.getName());
-        composerFactory.addImport(java.util.SortedSet.class.getName());
-        composerFactory.addImport(java.util.Date.class.getName());
-//		// GWT imports
-        composerFactory.addImport(com.google.gwt.core.client.GWT.class.getName());
-        composerFactory.addImport(com.google.gwt.json.client.JSONNull.class.getName());
-        composerFactory.addImport(com.google.gwt.json.client.JSONNumber.class.getName());
-        composerFactory.addImport(com.google.gwt.json.client.JSONString.class.getName());
-        composerFactory.addImport(com.google.gwt.json.client.JSONValue.class.getName());
-        composerFactory.addImport(com.google.gwt.json.client.JSONObject.class.getName());
-        composerFactory.addImport(com.google.gwt.json.client.JSONArray.class.getName());
-        composerFactory.addImport(com.google.gwt.json.client.JSONBoolean.class.getName());
-        composerFactory.addImport(com.google.gwt.json.client.JSONParser.class.getName());
-        composerFactory.addImport(com.google.gwt.json.client.JSONException.class.getName());
-//		// Module imports
-        composerFactory.addImport(ObjectSerializer.class.getName());
-        composerFactory.addImport(JsonSerializable.class.getName());
-        composerFactory.addImport(IncompatibleObjectException.class.getName());
-        composerFactory.addImport(SerializerHelper.class.getName());
-        composerFactory.addImport(DeserializerHelper.class.getName());
-
-        JClassType[] subTypes = serializeInterface.getSubtypes();
-        for (int i = 0; i < subTypes.length; ++i) {
-            composerFactory.addImport(subTypes[i].getQualifiedSourceName());
-        }
+        JClassType[] subTypes = addImports(composerFactory);
 
         srcWriter = composerFactory.createSourceWriter(ctx, printWriter);
         if (srcWriter == null) {
@@ -106,102 +93,172 @@ public class SerializationGenerator extends Generator {
         }
 
         //create a serializer for each interface that supports Serializable
-        for (int i = 0; i < subTypes.length; ++i) {
-            if (subTypes[i].isAbstract()) {
-                continue;
-            }
-            srcWriter.println("public class " + subTypes[i].getName() + "_SerializableImpl implements ObjectSerializer{");
-//					System.out.println("public class "+subTypes[i].getName()+"_SerializableImpl implements ObjectSerializer{");
-            srcWriter.indent();
-            srcWriter.println("public " + subTypes[i].getName() + "_SerializableImpl(){}");
-//					System.out.println("public "+subTypes[i].getName()+"_SerializableImpl(){}");
-
-            StringBuffer buffer = new StringBuffer();
-            try {
-                String defaultSerializationString = generateDefaultSerialization();
-                String typeSerializationString = generateTypeSerialization(subTypes[i].getQualifiedSourceName());
-                String defaultDeserializationString = generateDefaultDeserialization(subTypes[i].getQualifiedSourceName());
-                String tyepDeserializationString = generateTypeDeserialization(subTypes[i].getQualifiedSourceName());
-
-                buffer.append(defaultSerializationString);
-                buffer.append("\n");
-                buffer.append(typeSerializationString);
-                buffer.append("\n");
-                buffer.append(defaultDeserializationString);
-                buffer.append("\n");
-                buffer.append(tyepDeserializationString);
-                buffer.append("\n");
-                buffer.append("}");
-                buffer.append("\n");
-                //System.out.println(buffer.toString());
-            } catch (NotFoundException e) {
-                e.printStackTrace();
-            }
-
-            srcWriter.println(buffer.toString());
-//					System.out.println(buffer.toString());
-        }
-
+        HashMap<String, JClassType> serializerMap = writeTypeSerializers(subTypes);
 
         //in the class constructor, add each serializer
-        srcWriter.println("public " + className + "(){");
-//		System.out.println("public "+className+"(){");
-        srcWriter.indent();
-        for (int i = 0; i < subTypes.length; ++i) {
-            if (subTypes[i].isAbstract()) {
-                continue;
-            }
-            srcWriter.println("addObjectSerializer(\"" + subTypes[i].getQualifiedSourceName() + "\", new " + subTypes[i].getName() + "_SerializableImpl() );");
-//					System.out.println("addObjectSerializer(\""+subTypes[i].getQualifiedSourceName()+"\", new "+subTypes[i].getName()+"_SerializableImpl() );");
-        }
-        srcWriter.outdent();
-        srcWriter.println("}");
-//		System.out.println("}");
+        writeTypeSerializerConstructor(serializerMap);
 
         srcWriter.commit(logger);
         return packageName + "." + className;
     }
 
-    private String generateTypeDeserialization(String typeName) throws NotFoundException {
+    private HashMap<String, JClassType> writeTypeSerializers(JClassType[] subTypes) {
+        HashMap<String, JClassType> serializerMap = new HashMap<String, JClassType>();
+        for (JClassType typeToSerialize : subTypes) {
+            if (typeToSerialize.isAbstract()) {
+                continue;
+            }
+            String serializerName = writeTypeSerializerClass(typeToSerialize);
+            serializerMap.put(serializerName, typeToSerialize);
+        }
+        return serializerMap;
+    }
+
+    private String writeTypeSerializerClass(JClassType typeToSerialize) {
+        String serializerName = typeToSerialize.getName().replaceAll("\\.","\\$");
+        writeLn("public class " + serializerName + "_SerializableImpl implements ObjectSerializer{");
+        indent();
+        writeLn("public " + serializerName + "_SerializableImpl(){}");
+
+        try {
+            generateDefaultSerialization();
+            generateTypeSerialization(typeToSerialize.getQualifiedSourceName());
+            generateDefaultDeserialization(typeToSerialize.getQualifiedSourceName());
+            generateTypeDeserialization(typeToSerialize.getQualifiedSourceName());
+
+        } catch (NotFoundException e) {
+            e.printStackTrace();
+        } catch (UnableToCompleteException e) {
+            e.printStackTrace();
+        }
+        outdent();
+        writeLn("}");
+        return serializerName;
+    }
+
+    private JClassType[] addImports(ClassSourceFileComposerFactory composerFactory) throws UnableToCompleteException {
+        Set<String> importsList = new HashSet<String>();
+        // Java imports
+        importsList.add(Collection.class.getName());
+        importsList.add(List.class.getName());
+        importsList.add(ArrayList.class.getName());
+        importsList.add(HashSet.class.getName());
+        importsList.add(Date.class.getName());
+        importsList.add(HashMap.class.getName());
+        importsList.add(Map.class.getName());
+//		// GWT imports
+        importsList.add(com.google.gwt.core.client.GWT.class.getName());
+        importsList.add(com.google.gwt.json.client.JSONNull.class.getName());
+        importsList.add(com.google.gwt.json.client.JSONNumber.class.getName());
+        importsList.add(com.google.gwt.json.client.JSONString.class.getName());
+        importsList.add(com.google.gwt.json.client.JSONValue.class.getName());
+        importsList.add(com.google.gwt.json.client.JSONObject.class.getName());
+        importsList.add(com.google.gwt.json.client.JSONArray.class.getName());
+        importsList.add(com.google.gwt.json.client.JSONBoolean.class.getName());
+        importsList.add(com.google.gwt.json.client.JSONParser.class.getName());
+        importsList.add(com.google.gwt.json.client.JSONException.class.getName());
+//		// Module imports
+        importsList.add(ObjectSerializer.class.getName());
+        importsList.add(MARKER_INTERFACE.getQualifiedSourceName());
+        importsList.add(IncompatibleObjectException.class.getName());
+        importsList.add(SerializerHelper.class.getName());
+        importsList.add(DeserializerHelper.class.getName());
+
+        JClassType[] subTypes = MARKER_INTERFACE.getSubtypes();
+        for (int i = 0; i < subTypes.length; ++i) {
+            String serializedType = subTypes[i].getQualifiedSourceName();
+            JClassType baseType;
+            try {
+                baseType = typeOracle.getType(serializedType);
+            } catch (NotFoundException e) {
+                throw new UnableToCompleteException();
+            }
+            discoverImports(importsList, baseType);
+        }
+
+        for (String typeToImport : importsList) {
+            composerFactory.addImport(typeToImport);
+        }
+        return subTypes;
+    }
+
+    private void writeTypeSerializerConstructor(HashMap<String, JClassType> serializerMap) {
+        writeLn("public " + className + "(){");
+        indent();
+        for (Map.Entry<String, JClassType> entry : serializerMap.entrySet()) {
+            addObjectSerializer(entry);
+        }
+
+        outdent();
+        writeLn("}");
+    }
+
+    private void addObjectSerializer(Map.Entry<String, JClassType> entry) {
+        writeLn("addObjectSerializer(\"" + entry.getValue().getQualifiedSourceName() + "\", new " + entry.getKey() + "_SerializableImpl() );");
+        if (entry.getValue().getQualifiedSourceName() != entry.getValue().getQualifiedBinaryName()) {
+            writeLn("addObjectSerializer(\"" + entry.getValue().getQualifiedBinaryName() + "\", new " + entry.getKey() + "_SerializableImpl() );");
+        }
+    }
+
+    private void discoverImports(Set<String> importsList, JClassType baseType) {
+        addImports(importsList, baseType);
+        for (JField field : baseType.getFields()) {
+            if (!field.isStatic() && !field.isTransient()) {
+                JType fieldType = field.getType();
+                if (fieldType.isClassOrInterface() != null) {
+                    addImports(importsList, fieldType.isClassOrInterface());
+                }
+            }
+        }
+    }
+
+    private void addImports(Set<String> importsList, JClassType baseType) {
+        if (baseType.isEnum() != null) {
+            importsList.add(baseType.getQualifiedSourceName());
+        } else if (baseType.isParameterized() != null) {
+            importsList.add(baseType.getQualifiedSourceName());
+            JParameterizedType parameterizedType = baseType.isParameterized();
+            for (JClassType typeParm : parameterizedType.getTypeArgs()) {
+                if(!importsList.contains(typeParm.getQualifiedSourceName()))
+                addImports(importsList, typeParm);
+            }
+        } else if (baseType.isAssignableTo(MARKER_INTERFACE) && !importsList.contains(baseType.getQualifiedSourceName())) {
+            importsList.add(baseType.getQualifiedSourceName());
+            discoverImports(importsList, baseType);
+        }
+    }
+
+    private void generateTypeDeserialization(String typeName) throws NotFoundException, UnableToCompleteException {
 
         JClassType baseType = typeOracle.getType(typeName);
         String packageName = baseType.getPackage().getName();
 
-        StringBuffer buffer = new StringBuffer();
-        buffer.append("public Object deSerialize(JSONValue jsonValue, String className) throws JSONException{");
-        buffer.append("\n");
-
+        writeLn("public Object deSerialize(JSONValue jsonValue, String className) throws JSONException{");
+        indent();
+        //writeLn("serializer = GWT.create(Serializer.class);");
         // Return null if the given object is null
-        buffer.append("if(jsonValue instanceof JSONNull){");
-        buffer.append("\n");
-        buffer.append("return null;");
-        buffer.append("\n");
-        buffer.append("}");
-        buffer.append("\n");
+        writeLn("if(jsonValue instanceof JSONNull){");
+        indent();
+        writeLn("return null;");
+        outdent();
+        writeLn("}");
 
         // Throw Incompatible exception is JsonValue is not an instance of
         // JsonObject
-        buffer.append("if(!(jsonValue instanceof JSONObject)){");
-        buffer.append("\n");
-        buffer.append("throw new IncompatibleObjectException();");
-        buffer.append("\n");
-        buffer.append("}");
-        buffer.append("\n");
+        writeLn("if(!(jsonValue instanceof JSONObject)){");
+        indent();
+        writeLn("throw new IncompatibleObjectException();");
+        outdent();
+        writeLn("}");
 
         // Initialise JsonObject then
         String baseTypeName = baseType.getSimpleSourceName();
-        buffer.append("JSONObject jsonObject=(JSONObject)jsonValue;");
-        buffer.append("\n");
-        buffer.append(baseTypeName + " mainResult=new " + baseTypeName + "();");
-        buffer.append("\n");
-        buffer.append("Serializer serializer;");
-        buffer.append("\n");
-        buffer.append("JSONArray inputJsonArray=null;");
-        buffer.append("\n");
-        buffer.append("int inpJsonArSize=0;");
-        buffer.append("\n");
-        buffer.append("JSONValue fieldJsonValue=null;");
-        buffer.append("\n");
+        writeLn("JSONObject jsonObject=(JSONObject)jsonValue;");
+        writeLn(baseTypeName + " mainResult=new " + baseTypeName + "();");
+        writeLn("JSONArray inputJsonArray=null;");
+        writeLn("int inpJsonArSize=0;");
+        writeLn("JSONValue fieldJsonValue=null;");
+        writeLn("JSONObject inputJsonObject=null;");
 
         // Start deSerialisation
         List<JField> allFields = new ArrayList<JField>();
@@ -211,12 +268,12 @@ public class SerializationGenerator extends Generator {
                 allFields.add(field);
             }
         }
-        if (baseType.isAssignableTo(typeOracle.getType("com.kfuntak.gwt.json.serialization.client.JsonSerializable"))) {
+        if (baseType.isAssignableTo(MARKER_INTERFACE)) {
             boolean flag = true;
             JClassType superClassType = baseType;
             while (flag) {
                 superClassType = superClassType.getSuperclass();
-                if (superClassType.isAssignableTo(typeOracle.getType("com.kfuntak.gwt.json.serialization.client.JsonSerializable"))) {
+                if (superClassType.isAssignableTo(MARKER_INTERFACE)) {
                     JField[] subClassFields = superClassType.getFields();
                     for (JField subClassField : subClassFields) {
                         if (!subClassField.isStatic() && !subClassField.isTransient()) {
@@ -235,249 +292,264 @@ public class SerializationGenerator extends Generator {
             JType fieldType = field.getType();
             String fieldName = field.getName();
             String fieldNameForGS = getNameForGS(fieldName);
-            buffer.append("fieldJsonValue=jsonObject.get(\"" + fieldName + "\");");
-            buffer.append("\n");
+            writeLn("fieldJsonValue=jsonObject.get(\"" + fieldName + "\");");
             if (fieldType.isPrimitive() != null) {
                 JPrimitiveType fieldPrimitiveType = (JPrimitiveType) fieldType;
                 JClassType fieldBoxedType = typeOracle.getType(fieldPrimitiveType.getQualifiedBoxedSourceName());
-                if (fieldBoxedType.getQualifiedSourceName().equals("java.lang.Short")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getShort(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldBoxedType.getQualifiedSourceName().equals("java.lang.Byte")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getByte(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldBoxedType.getQualifiedSourceName().equals("java.lang.Long")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getLong(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldBoxedType.getQualifiedSourceName().equals("java.lang.Integer")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getInt(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldBoxedType.getQualifiedSourceName().equals("java.lang.Float")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getFloat(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldBoxedType.getQualifiedSourceName().equals("java.lang.Double")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getDouble(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldBoxedType.getQualifiedSourceName().equals("java.lang.Boolean")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getBoolean(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldBoxedType.getQualifiedSourceName().equals("java.lang.Character")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getShort(fieldJsonValue));");
-                    buffer.append("\n");
-                }
+                String valueString = deserializeSimpleType(fieldBoxedType, "fieldJsonValue");
+                writeLn("mainResult.set" + fieldNameForGS + "(" + valueString + ");");
             } else {
+                // Return null if JSON object is null
                 JClassType fieldClassType = (JClassType) fieldType;
-                if (fieldClassType.getQualifiedSourceName().equals("java.lang.Short")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getShort(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Byte")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getByte(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Long")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getLong(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Integer")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getInt(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Float")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getFloat(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Double")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getDouble(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Boolean")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getBoolean(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Character")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getShort(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.util.Date")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getDate(fieldJsonValue));");
-                    buffer.append("\n");
-                } else if (fieldClassType.isAssignableTo(typeOracle.getType("com.kfuntak.gwt.json.serialization.client.JsonSerializable"))) {
-                    importsList.add(fieldClassType.getQualifiedSourceName());
-                    buffer.append("serializer = GWT.create(Serializer.class);");
-                    buffer.append("\n");
-                    buffer.append("mainResult.set" + fieldNameForGS + "((" + fieldClassType.getSimpleSourceName() + ")serializer.deSerialize(fieldJsonValue, \"" + fieldClassType.getQualifiedSourceName() + "\"));");
-                    buffer.append("\n");
-                } else if (fieldClassType.isAssignableTo(typeOracle.getType("java.util.Collection"))) {
-                    deserializeCollection(buffer, fieldClassType, fieldNameForGS, fieldName);
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.String")) {
-                    buffer.append("mainResult.set" + fieldNameForGS + "(DeserializerHelper.getString(fieldJsonValue));");
-                    buffer.append("\n");
-                }
+                String value = deserializeValue(fieldClassType, "fieldJsonValue");
+                writeLn("mainResult.set" + fieldNameForGS + "(" + value + ");");
             }
         }
 
-        buffer.append("return mainResult;");
-        buffer.append("\n");
-        buffer.append("}");
-        buffer.append("\n");
-        return buffer.toString();
+        writeLn("return mainResult;");
+        outdent();
+        writeLn("}");
     }
 
-    private void deserializeCollection(StringBuffer buffer, JClassType fieldClassType, String fieldNameForGS, String fieldName) throws NotFoundException {
-        // Return null if JSON object is null
-        buffer.append("if(fieldJsonValue==null || fieldJsonValue instanceof JSONNull){");
-        buffer.append("\n");
-        buffer.append("mainResult.set" + fieldNameForGS + "(null);");
-        buffer.append("\n");
-        buffer.append("return mainResult;");
-        buffer.append("\n");
-        buffer.append("}");
-        buffer.append("\n");
-
-        // Throw Incompatible exception if the JSON object is not a collection
-        buffer.append("if(!(fieldJsonValue instanceof JSONArray)){");
-        buffer.append("\n");
-        buffer.append("throw new IncompatibleObjectException();");
-        buffer.append("\n");
-        buffer.append("}");
-        buffer.append("\n");
-
+    private String deserializeCollection(JClassType colType, String inputColVar) throws NotFoundException, UnableToCompleteException {
+        writeLn("//deserializeCollection - " + colType.toString() + " - " + inputColVar);
         // Start deSerilisation
-        buffer.append("inputJsonArray=(JSONArray)fieldJsonValue;");
-        buffer.append("\n");
-        buffer.append("inpJsonArSize=inputJsonArray.size();");
-        buffer.append("\n");
+        String loopSuffix = getLoopVarSuffix();
+        JParameterizedType parameterizedType = (JParameterizedType) colType;
+        JClassType valueType = parameterizedType.getTypeArgs()[0];
+        String colVar = "col" + loopSuffix;// Field Collection Result
+        String valVar = "val" + loopSuffix;
+        writeLn("JSONValue " + valVar + ";");
+        String indexVar = "idx" + loopSuffix;
 
-        String fieldTypeQualifiedName = fieldClassType.getQualifiedSourceName();
-        JParameterizedType parameterizedType = (JParameterizedType) fieldClassType;
-        fieldClassType = parameterizedType.getTypeArgs()[0];
-        String parameterSimpleName = fieldClassType.getSimpleSourceName();
-        String fieldColName = fieldName + "Col";// Field Collection Result
         // Object Name
-        importsList.add(fieldClassType.getQualifiedSourceName());
-        if (fieldTypeQualifiedName.equals("java.util.List") || fieldTypeQualifiedName.equals("java.util.ArrayList")) {
-            buffer.append("ArrayList<" + parameterSimpleName + "> " + fieldColName + " = new ArrayList<" + parameterSimpleName + ">();");
-            buffer.append("\n");
-        } else if (fieldTypeQualifiedName.equals("java.util.Set") || fieldTypeQualifiedName.equals("java.util.HashSet")) {
-            buffer.append("HashSet<" + parameterSimpleName + "> " + fieldColName + " = new HashSet<" + parameterSimpleName + ">();");
-            buffer.append("\n");
-        } else if (fieldTypeQualifiedName.equals("java.util.SortedSet") || fieldTypeQualifiedName.equals("java.util.TreeSet")) {
-            buffer.append("TreeSet<" + parameterSimpleName + "> " + fieldColName + " = new TreeSet<" + parameterSimpleName + ">();");
-            buffer.append("\n");
-        } else if (fieldTypeQualifiedName.equals("java.util.LinkedList")) {
-            buffer.append("LinkedList<" + parameterSimpleName + "> " + fieldColName + " = new LinkedList<" + parameterSimpleName + ">();");
-            buffer.append("\n");
-            buffer.append("mainResult.set" + fieldNameForGS + "(" + fieldColName + ");");
-            buffer.append("\n");
-        } else if (fieldTypeQualifiedName.equals("java.util.Stack")) {
-            buffer.append("Stack<" + parameterSimpleName + "> " + fieldColName + " = new Stack<" + parameterSimpleName + ">();");
-            buffer.append("\n");
-        } else if (fieldTypeQualifiedName.equals("java.util.Vector")) {
-            buffer.append("Vector<" + parameterSimpleName + "> " + fieldColName + " = new Vector<" + parameterSimpleName + ">();");
-            buffer.append("\n");
-        } else if (fieldTypeQualifiedName.equals("java.util.LinkedHashSet")) {
-            buffer.append("LinkedHashSet<" + parameterSimpleName + "> " + fieldColName + "=new LinkedHashSet<" + parameterSimpleName + ">();");
-            buffer.append("\n");
-        }
-        buffer.append("for(int ij=0;ij<inpJsonArSize;ij++){");
+
+        writeLn(createTypeString(colType, false) + " " + colVar + " = new " + createTypeString(colType, true) + "();");
+        writeLn("if (" + inputColVar + " != null && !(" + inputColVar + " instanceof JSONNull)) {");
+        indent();
+        writeLn("if(!("+inputColVar+" instanceof JSONArray)){");
+        indent();
+        writeLn("throw new IncompatibleObjectException();");
+        outdent();
+        writeLn("}");
+        writeLn("for(int " + indexVar + "=0;" + indexVar + "<((JSONArray)" + inputColVar + ").size();" + indexVar + "++){");
+        indent();
         // DeSerialise individual elements
-        buffer.append("fieldJsonValue=inputJsonArray.get(ij);");
-        if (fieldClassType.getQualifiedSourceName().equals("java.lang.Short")) {
-            buffer.append(fieldColName + ".add(DeserializerHelper.getShort(fieldJsonValue));");
-            buffer.append("\n");
-        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Byte")) {
-            buffer.append(fieldColName + ".add(DeserializerHelper.getByte(fieldJsonValue));");
-            buffer.append("\n");
-        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Long")) {
-            buffer.append(fieldColName + ".add(DeserializerHelper.getLong(fieldJsonValue));");
-            buffer.append("\n");
-        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Integer")) {
-            buffer.append(fieldColName + ".add(DeserializerHelper.getInt(fieldJsonValue));");
-            buffer.append("\n");
-        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Float")) {
-            buffer.append(fieldColName + ".add(DeserializerHelper.getFloat(fieldJsonValue));");
-            buffer.append("\n");
-        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Double")) {
-            buffer.append(fieldColName + ".add(DeserializerHelper.getDouble(fieldJsonValue));");
-            buffer.append("\n");
-        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Boolean")) {
-            buffer.append(fieldColName + ".add(DeserializerHelper.getBoolean(fieldJsonValue));");
-            buffer.append("\n");
-        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Character")) {
-            buffer.append(fieldColName + ".add(DeserializerHelper.getShort(fieldJsonValue));");
-            buffer.append("\n");
-        } else if (fieldClassType.getQualifiedSourceName().equals("java.util.Date")) {
-            buffer.append(fieldColName + ".add(DeserializerHelper.getDate(fieldJsonValue));");
-            buffer.append("\n");
-        } else if (fieldClassType.isAssignableTo(typeOracle.getType("com.kfuntak.gwt.json.serialization.client.JsonSerializable"))) {
-            importsList.add(fieldClassType.getQualifiedSourceName());
-            buffer.append("serializer = GWT.create(Serializer.class);");
-            buffer.append("\n");
-            buffer.append("JSONValue _class = ((JSONObject)fieldJsonValue).get(\"class\");");
-            buffer.append("\n");
-            buffer.append("if (_class != null && _class instanceof JSONString) {");
-            buffer.append("\n");
-            buffer.append(fieldColName + ".add((" + fieldClassType.getSimpleSourceName() + ")serializer.deSerialize(fieldJsonValue, ((JSONString)_class).stringValue()));");
-            buffer.append("\n");
-            buffer.append("} else {");
-            buffer.append(fieldColName + ".add((" + fieldClassType.getSimpleSourceName() + ")serializer.deSerialize(fieldJsonValue, \"" + fieldClassType.getQualifiedSourceName() + "\"));");
-            buffer.append("}");
-            buffer.append("\n");
-        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.String")) {
-            buffer.append(fieldColName + ".add(DeserializerHelper.getString(fieldJsonValue));");
-            buffer.append("\n");
+        writeLn(valVar + "=((JSONArray)" + inputColVar + ").get("+indexVar+");");
+
+        String value = deserializeValue(valueType, valVar);
+        writeLn(colVar + ".add(" + value + ");");
+        outdent();
+        writeLn("}");
+        outdent();
+        writeLn("}");
+        return colVar;
+    }
+
+    private String deserializeValue(JClassType valueType, String valVar) throws NotFoundException, UnableToCompleteException {
+        String value;
+        if (valueType.isAssignableTo(MARKER_INTERFACE)) {
+            value = deserializeType(valueType, valVar);
+        } else if (valueType.isEnum() != null) {
+            value = deserializeEnum((JEnumType) valueType, valVar);
+        } else if (valueType.isAssignableTo(typeOracle.getType("java.util.Map"))) {
+            value = deserializeMap(valueType, valVar);
+        } else if (valueType.isAssignableTo(typeOracle.getType("java.util.Collection"))) {
+            value = deserializeCollection(valueType, valVar);
+        } else {
+            value = deserializeSimpleType(valueType, valVar);
         }
-        buffer.append("}");
-        buffer.append("\n");
-        buffer.append("mainResult.set" + fieldNameForGS + "(" + fieldColName + ");");
-        buffer.append("\n");
+        return value;
     }
 
-    private String generateDefaultDeserialization(String className) {
-        StringBuffer buffer = new StringBuffer();
-        buffer.append("public Object deSerialize(String jsonString, String className) throws JSONException{");
-        buffer.append("\n");
-        buffer.append("return deSerialize(JSONParser.parse(jsonString), \"" + className + "\");");
-        buffer.append("\n");
-        buffer.append("}");
-        buffer.append("\n");
-        return buffer.toString();
+    private String createTypeParmString(JParameterizedType parameterizedType) throws NotFoundException {
+        StringBuilder sb = new StringBuilder();
+        sb.append('<');
+        boolean first = true;
+        for (JClassType type : parameterizedType.getTypeArgs()) {
+            if (!first) {
+                sb.append(',');
+            } else {
+                first = false;
+            }
+
+            sb.append(createTypeString(type, false));
+        }
+        sb.append('>');
+        return sb.toString();
     }
 
-    private String generateTypeSerialization(String typeName) throws NotFoundException {
+    private String createTypeString(JType fieldType, boolean forCreation) throws NotFoundException {
+        JPrimitiveType primitiveType = fieldType.isPrimitive();
+        if (primitiveType != null) {
+            return createTypeString(typeOracle.getType(primitiveType.getQualifiedBoxedSourceName()),forCreation);
+        }
+
+        JParameterizedType parameterizedType = fieldType.isParameterized();
+        if (parameterizedType != null) {
+            StringBuilder sb = new StringBuilder();
+            if (forCreation && parameterizedType.getName().equals("Map")) {
+                sb.append("HashMap");
+            } else if (forCreation && parameterizedType.getName().equals("List")) {
+                sb.append("ArrayList");
+            } else if (forCreation && parameterizedType.getName().equals("Set")) {
+                sb.append("HashSet");
+            } else {
+                sb.append(parameterizedType.getName());
+            }
+            sb.append(createTypeParmString(parameterizedType));
+            return sb.toString();
+        }
+
+        return ((JClassType) fieldType).getName();
+    }
+    
+    private String deserializeMap(JClassType mapType, String inputMapVar) throws UnableToCompleteException, NotFoundException {
+        writeLn("//deserializeMap - " + mapType.toString() + " - " + inputMapVar);
+        JParameterizedType parameterizedType = (JParameterizedType) mapType;
+        JClassType keyParm = parameterizedType.getTypeArgs()[0];
+        JClassType valueParm = parameterizedType.getTypeArgs()[1];
+        if(!keyParm.getQualifiedSourceName().equals("java.lang.String")) {
+            throw new UnableToCompleteException();
+        }
+        String loopSuffix = getLoopVarSuffix();
+        String mapVar = "map" + loopSuffix;// Field Collection Result
+        String keyVar = "key" + loopSuffix;
+        String valVar = "val" + loopSuffix;
+        // Object Name
+
+        writeLn(createTypeString(mapType, false) + " " + mapVar + " = new " + createTypeString(mapType, true) + "();");
+        writeLn("if (" + inputMapVar + " != null && !(" + inputMapVar +" instanceof JSONNull)) {");
+        indent();
+        writeLn("if(!("+inputMapVar+" instanceof JSONObject)){");
+        indent();
+        writeLn("throw new IncompatibleObjectException();");
+        outdent();
+        writeLn("}");
+        writeLn("JSONValue " + valVar + ";");
+        writeLn("for(String " + keyVar + ":((JSONObject)" + inputMapVar + ").keySet()){");
+        indent();
+        // DeSerialise individual elements
+        writeLn(valVar + "=((JSONObject)"+ inputMapVar +").get(" + keyVar + ");");
+
+        String value = deserializeValue(valueParm, valVar);
+        writeLn(mapVar + ".put(" + keyVar + "," + value + ");");
+        outdent();
+        writeLn("}");
+        outdent();
+        writeLn("}");
+        return mapVar;
+    }
+
+    private String deserializeEnum(JEnumType enumType, String inputValVar) {
+        writeLn("//deserializeEnum - " + enumType.toString() + " - " + inputValVar);
+        String enumVar = "enum" + getLoopVarSuffix();
+        JEnumConstant defaultConstant = enumType.getEnumConstants()[0];
+        writeLn(enumType.getSimpleSourceName() + " " + enumVar + " = "+ enumType.getSimpleSourceName() + "." + defaultConstant.getName() +";");
+        writeLn("if(" + inputValVar + " != null && !(" + inputValVar + " instanceof JSONNull)) {");
+        indent();
+        boolean first = true;
+        for (JEnumConstant constant : enumType.getEnumConstants()) {
+            if(!first) {
+                writeLn("else");
+            }
+            first = false;
+            writeLn("if (" + inputValVar + ".isString().stringValue().equals(\"" + constant.getName() + "\")) {");
+            indent();
+            writeLn(enumVar + " = " + enumType.getSimpleSourceName() + "." + constant.getName() + ";");
+            outdent();
+            writeLn("}");
+        }
+        outdent();
+        writeLn("}");
+        return enumVar;
+    }
+
+    private String serializeEnum(JEnumType enumType, String inputValVar) {
+        String enumVar = "enum" + getLoopVarSuffix();
+        writeLn("JSONValue " + enumVar + " = JSONNull.getInstance();");
+        writeLn("switch(("+ enumType.getSimpleSourceName() +")"+inputValVar+") {");
+        indent();
+        for (JEnumConstant constant : enumType.getEnumConstants()) {
+            writeLn("case " + constant.getName() + ": ");
+            indent();
+            writeLn(enumVar + " = new JSONString(" + enumType.getSimpleSourceName() + "." + constant.getName() + ".toString());break;");
+            outdent();
+        }
+        outdent();
+        writeLn("}");
+        return enumVar;
+    }
+
+    private String deserializeSimpleType(JClassType fieldClassType, String variable) {
+        if (fieldClassType.getQualifiedSourceName().equals("java.lang.Short")) {
+            return "DeserializerHelper.getShort(" + variable + ")";
+        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Byte")) {
+            return "DeserializerHelper.getByte(" + variable + ")";
+        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Long")) {
+            return "DeserializerHelper.getLong(" + variable + ")";
+        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Integer")) {
+            return "DeserializerHelper.getInt(" + variable + ")";
+        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Float")) {
+            return "DeserializerHelper.getFloat(" + variable + ")";
+        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Double")) {
+            return "DeserializerHelper.getDouble(" + variable + ")";
+        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Boolean")) {
+            return "DeserializerHelper.getBoolean(" + variable + ")";
+        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Character")) {
+            return "DeserializerHelper.getChar(" + variable + ")";
+        } else if (fieldClassType.getQualifiedSourceName().equals("java.util.Date")) {
+            return "DeserializerHelper.getDate(" + variable + ")";
+        } else {
+            return "DeserializerHelper.getString(" + variable + ")";
+        }
+    }
+
+    private String deserializeType(JClassType fieldClassType, String inputTypeVar) {
+        writeLn("//deserializeType - " + fieldClassType + " - " + inputTypeVar);
+        String typeVar = "deserType" + getLoopVarSuffix();
+        writeLn(fieldClassType.getName() + " " + typeVar + " = null;");
+        writeLn("if (" + inputTypeVar + " != null && !(" + inputTypeVar + " instanceof JSONNull)){");
+        indent();
+        writeLn(typeVar + " = " + "(" + fieldClassType.getSimpleSourceName() + ")Serializer_TypeSerializer.this.deSerialize(" + inputTypeVar + ");");
+        outdent();
+        writeLn("}");
+        return typeVar;
+    }
+
+    private void generateDefaultDeserialization(String className) {
+        writeLn("public Object deSerialize(String jsonString, String className) throws JSONException{");
+        indent();
+        writeLn("return deSerialize(JSONParser.parse(jsonString), \"" + className + "\");");
+        outdent();
+        writeLn("}");
+    }
+
+    private void generateTypeSerialization(String typeName) throws NotFoundException, UnableToCompleteException {
 
         JClassType baseType = typeOracle.getType(typeName);
-        String packageName = baseType.getPackage().getName();
-
-        StringBuffer buffer = new StringBuffer();
-        buffer.append("public JSONValue serializeToJson(Object object){");
-        buffer.append("\n");
-
+        writeLn("public JSONValue serializeToJson(Object object){");
+        indent();
+        //writeLn("serializer = GWT.create(Serializer.class);");
         // Return JSONNull instance if object is null
-        buffer.append("if(object==null){");
-        buffer.append("\n");
-        buffer.append("return JSONNull.getInstance();");
-        buffer.append("\n");
-        buffer.append("}");
-        buffer.append("\n");
+        writeLn("if(object==null){");
+        indent();
+        writeLn("return JSONNull.getInstance();");
+        outdent();
+        writeLn("}");
 
         // Throw Incompatible Exception if object is not of the type it claims
         // to be
-        buffer.append("if(!(object instanceof " + baseType.getSimpleSourceName() + ")){");
-        buffer.append("\n");
-        buffer.append("throw new IncompatibleObjectException();");
-        buffer.append("\n");
-        buffer.append("}");
-        buffer.append("\n");
+        writeLn("if(!(object instanceof " + baseType.getSimpleSourceName() + ")){");
+        indent();
+        writeLn("throw new IncompatibleObjectException();");
+        outdent();
+        writeLn("}");
 
         // Initialise result object
-        buffer.append("JSONObject mainResult=new JSONObject();");
-        buffer.append("\n");
-        buffer.append("JSONValue jsonValue=null;");
-        buffer.append("\n");
-        buffer.append("JSONArray jsonResultArray=null;");
-        buffer.append("\n");
-        buffer.append("int index=0;");
-        buffer.append("\n");
-        buffer.append("Serializer serializer=null;");
-        buffer.append("\n");
-        buffer.append("Object fieldValue=null;");
-        buffer.append("\n");
-        buffer.append(baseType.getSimpleSourceName() + " mainVariable=(" + baseType.getSimpleSourceName() + ")object;");
-        buffer.append("\n");
+        writeLn("JSONObject mainResult=new JSONObject();");
+        writeLn("Object fieldValue=null;");
+        writeLn(baseType.getSimpleSourceName() + " mainVariable=(" + baseType.getSimpleSourceName() + ")object;");
 
         // Serialise fields
         List<JField> allFields = new ArrayList<JField>();
@@ -487,12 +559,12 @@ public class SerializationGenerator extends Generator {
                 allFields.add(field);
             }
         }
-        if (baseType.isAssignableTo(typeOracle.getType("com.kfuntak.gwt.json.serialization.client.JsonSerializable"))) {
+        if (baseType.isAssignableTo(MARKER_INTERFACE)) {
             boolean flag = true;
             JClassType superClassType = baseType;
             while (flag) {
                 superClassType = superClassType.getSuperclass();
-                if (superClassType.isAssignableTo(typeOracle.getType("com.kfuntak.gwt.json.serialization.client.JsonSerializable"))) {
+                if (superClassType.isAssignableTo(MARKER_INTERFACE)) {
                     JField[] subClassFields = superClassType.getFields();
                     for (JField subClassField : subClassFields) {
                         if (!subClassField.isStatic() && !subClassField.isTransient()) {
@@ -509,150 +581,143 @@ public class SerializationGenerator extends Generator {
         for (JField field : fields) {
             JType fieldType = field.getType();
             String fieldName = field.getName();
-            String fieldNameForGS = getNameForGS(fieldName);
+            String getter = getGetter(fieldType, getNameForGS(fieldName));
             // Get field value for object
-            buffer.append("fieldValue=mainVariable.get" + fieldNameForGS + "();");
-            buffer.append("\n");
-
-            if (fieldType.isPrimitive() != null) {
-                JPrimitiveType fieldPrimitiveType = (JPrimitiveType) fieldType;
-                JClassType fieldBoxedType = typeOracle.getType(fieldPrimitiveType.getQualifiedBoxedSourceName());
-                if (fieldBoxedType.getQualifiedSourceName().equals("java.lang.Boolean")) {
-                    buffer.append("jsonValue=SerializerHelper.getBoolean((Boolean)fieldValue);");
-                    buffer.append("\n");
-                    buffer.append("mainResult.put(\"" + fieldName + "\",jsonValue);");
-                    buffer.append("\n");
-                } else if (fieldBoxedType.getQualifiedSourceName().equals("java.lang.Character")) {
-                    buffer.append("jsonValue=SerializerHelper.getChar((Character)fieldValue);");
-                    buffer.append("\n");
-                    buffer.append("mainResult.put(\"" + fieldName + "\",jsonValue);");
-                    buffer.append("\n");
-                } else if (fieldBoxedType.isAssignableTo(typeOracle.getType("java.lang.Number"))) {
-                    buffer.append("jsonValue=SerializerHelper.getNumber((Number)fieldValue);");
-                    buffer.append("\n");
-                    buffer.append("mainResult.put(\"" + fieldName + "\",jsonValue);");
-                    buffer.append("\n");
-                }
-            } else {
-                JClassType fieldClassType = (JClassType) fieldType;
-                if (fieldClassType.isAssignableTo(typeOracle.getType("java.util.Collection"))) {
-                    // Serialise collection
-                    JParameterizedType parameterizedType = (JParameterizedType) fieldClassType;
-                    fieldClassType = parameterizedType.getTypeArgs()[0];
-                    importsList.add(fieldClassType.getQualifiedSourceName());
-                    String fieldSimpleName = fieldClassType.getSimpleSourceName();
-                    buffer.append("\n");
-                    buffer.append("if(fieldValue != null){");
-                    buffer.append("\n");
-                    buffer.append("Collection<" + fieldSimpleName + "> " + fieldSimpleName.toLowerCase() + "ColValue=(Collection<" + fieldSimpleName + ">)fieldValue;");
-                    buffer.append("\n");
-                    buffer.append("jsonResultArray=new JSONArray();");
-                    buffer.append("\n");
-                    buffer.append("index=0;");
-                    buffer.append("\n");
-                    buffer.append("for(" + fieldSimpleName + " dummy : " + fieldSimpleName.toLowerCase() + "ColValue){");
-                    buffer.append("\n");
-                    if (fieldClassType.getQualifiedSourceName().equals("java.lang.String")) {
-                        buffer.append("jsonValue=SerializerHelper.getString((String)dummy);");
-                        buffer.append("\n");
-                        buffer.append("jsonResultArray.set(index++,jsonValue);");
-                        buffer.append("\n");
-                    } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Boolean")) {
-                        buffer.append("jsonValue=SerializerHelper.getBoolean((Boolean)dummy);");
-                        buffer.append("\n");
-                        buffer.append("jsonResultArray.set(index++,jsonValue);");
-                        buffer.append("\n");
-                    } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Character")) {
-                        buffer.append("jsonValue=SerializerHelper.getChar((Character)dummy);");
-                        buffer.append("\n");
-                        buffer.append("jsonResultArray.set(index++,jsonValue);");
-                        buffer.append("\n");
-                    } else if (fieldClassType.isAssignableTo(typeOracle.getType("java.lang.Number"))) {
-                        buffer.append("jsonValue=SerializerHelper.getNumber((Number)dummy);");
-                        buffer.append("\n");
-                        buffer.append("jsonResultArray.set(index++,jsonValue);");
-                        buffer.append("\n");
-                    } else if (fieldClassType.getQualifiedSourceName().equals("java.util.Date")) {
-                        buffer.append("jsonValue=SerializerHelper.getDate((Date)dummy);");
-                        buffer.append("\n");
-                        buffer.append("jsonResultArray.set(index++,jsonValue);");
-                        buffer.append("\n");
-                    } else if (fieldClassType.isAssignableTo(typeOracle.getType("com.kfuntak.gwt.json.serialization.client.JsonSerializable"))) {
-                        // TODO: Put alternalive to importsList
-                        //importsList.add(fieldClassType.getQualifiedSourceName());
-                        buffer.append("serializer = GWT.create(Serializer.class);");
-                        buffer.append("\n");
-                        buffer.append("jsonResultArray.set(index++,serializer.serializeToJson(dummy));");
-                        buffer.append("\n");
-                    }
-                    buffer.append("}");
-                    buffer.append("\n");
-                    buffer.append("mainResult.put(\"" + fieldName + "\",jsonResultArray);");
-                    buffer.append("\n");
-                    buffer.append("}");
-                    buffer.append("\n");
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.String")) {
-                    buffer.append("jsonValue=SerializerHelper.getString((String)fieldValue);");
-                    buffer.append("\n");
-                    buffer.append("mainResult.put(\"" + fieldName + "\",jsonValue);");
-                    buffer.append("\n");
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Boolean")) {
-                    buffer.append("jsonValue=SerializerHelper.getBoolean((Boolean)fieldValue);");
-                    buffer.append("\n");
-                    buffer.append("mainResult.put(\"" + fieldName + "\",jsonValue);");
-                    buffer.append("\n");
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Character")) {
-                    buffer.append("jsonValue=SerializerHelper.getChar((Character)fieldValue);");
-                    buffer.append("\n");
-                    buffer.append("mainResult.put(\"" + fieldName + "\",jsonValue);");
-                    buffer.append("\n");
-                } else if (fieldClassType.isAssignableTo(typeOracle.getType("java.lang.Number"))) {
-                    buffer.append("jsonValue=SerializerHelper.getNumber((Number)fieldValue);");
-                    buffer.append("\n");
-                    buffer.append("mainResult.put(\"" + fieldName + "\",jsonValue);");
-                    buffer.append("\n");
-                } else if (fieldClassType.getQualifiedSourceName().equals("java.util.Date")) {
-                    buffer.append("jsonValue=SerializerHelper.getDate((Date)fieldValue);");
-                    buffer.append("\n");
-                    buffer.append("mainResult.put(\"" + fieldName + "\",jsonValue);");
-                    buffer.append("\n");
-                } else if (fieldClassType.isAssignableTo(typeOracle.getType("com.kfuntak.gwt.json.serialization.client.JsonSerializable"))) {
-                    importsList.add(fieldClassType.getQualifiedSourceName());
-                    buffer.append("serializer = GWT.create(Serializer.class);");
-                    buffer.append("\n");
-                    buffer.append("mainResult.put(\"" + fieldName + "\",serializer.serializeToJson(fieldValue));");
-                    buffer.append("\n");
-                }
-
-            }
+            writeLn("fieldValue=mainVariable." + getter + "();");
+            JClassType fieldClassType = boxType(fieldType);
+            String value = serializeValue(fieldClassType, "fieldValue");
+            writeLn("mainResult.put(\"" + fieldName + "\"," + value + ");");
         }
 
         // Put class type for compatibility with flex JSON [de]serialisation
-        buffer.append("mainResult.put(\"class\",new JSONString(\"" + baseType.getQualifiedSourceName() + "\"));");
-        buffer.append("\n");
+        writeLn("mainResult.put(\"class\",new JSONString(\"" + baseType.getQualifiedSourceName() + "\"));");
 
         // Return statement
-        buffer.append("return mainResult;");
-        buffer.append("\n");
-        buffer.append("}");
-        buffer.append("\n");
-        return buffer.toString();
+        writeLn("return mainResult;");
+        outdent();
+        writeLn("}");
     }
 
-    private String generateDefaultSerialization() {
-        StringBuffer buffer = new StringBuffer();
-        buffer.append("public String serialize(Object pojo){");
-        buffer.append("\n");
-        buffer.append("return serializeToJson(pojo).toString();");
-        buffer.append("\n");
-        buffer.append("}");
-        buffer.append("\n");
-        return buffer.toString();
+    private String getGetter(JType fieldType, String fieldName) {
+        if (fieldType.getQualifiedSourceName().equals("java.lang.Boolean")) {
+            return "is" + fieldName;
+        } else {
+            return "get" + fieldName;
+        }
+    }
+
+    private JClassType boxType(JType fieldType) throws NotFoundException {
+        JPrimitiveType primitiveType = fieldType.isPrimitive();
+        if (primitiveType != null) {
+            return typeOracle.getType(primitiveType.getQualifiedBoxedSourceName());
+        }
+
+        return (JClassType)fieldType;
+    }
+
+    private String serializeCollection(JClassType fieldClassType, String variable) throws NotFoundException, UnableToCompleteException {
+        // Serialise collection
+        JParameterizedType parameterizedType = (JParameterizedType) fieldClassType;
+        JClassType typeParm = parameterizedType.getTypeArgs()[0];
+        String typeParmName = createTypeString(typeParm, false);
+        String suffix = getLoopVarSuffix();
+        String colVar = "col"+suffix;
+        String valVar = "val"+suffix;
+        String indexVar = "idx"+suffix;
+        writeLn("JSONArray " + colVar + "=null;");
+        writeLn("if(" + variable + " != null){");
+        indent();
+        writeLn(colVar + "= new JSONArray();");
+        writeLn("int " + indexVar + "=0;");
+        writeLn("for(" + typeParmName + " " + valVar + " : (Collection<" + typeParmName + ">)"+variable+"){");
+        indent();
+        typeParm = boxType(typeParm);
+        String value = serializeValue(typeParm, valVar);
+        writeLn(colVar + ".set(" + indexVar + "++," + value + ");");
+        outdent();
+        writeLn("}");
+        outdent();
+        writeLn("}");
+        return colVar;
+    }
+
+    private String serializeValue(JClassType typeParm, String valVar) throws NotFoundException, UnableToCompleteException {
+        String value;
+        if (typeParm.isAssignableTo(typeOracle.getType("java.util.Collection"))) {
+            value = serializeCollection(typeParm, valVar);
+        } else if (typeParm.isAssignableTo(typeOracle.getType("java.util.Map"))) {
+            value = serializeMap(typeParm, valVar);
+        } else if (typeParm.isEnum() != null) {
+            value = serializeEnum((JEnumType)typeParm, valVar);
+        } else {
+            value = getTypedValueAssignment(typeParm, valVar);
+        }
+        return value;
+    }
+
+    private String serializeMap(JClassType fieldClassType, String variable) throws NotFoundException, UnableToCompleteException {
+        JParameterizedType parameterizedType = (JParameterizedType) fieldClassType;
+        JClassType keyParm = parameterizedType.getTypeArgs()[0];
+        if(!keyParm.getQualifiedSourceName().equals("java.lang.String")) {
+            throw new UnableToCompleteException();
+        }
+        JClassType valueParm = parameterizedType.getTypeArgs()[1];
+        String genericClause = createTypeParmString(parameterizedType);
+        String suffix = getLoopVarSuffix();
+        String mapVar = "map" + suffix;
+        String entryVar = "entry" + suffix;
+        writeLn("JSONObject " + mapVar + " = new JSONObject();");
+        writeLn("for(Map.Entry" + genericClause + " " + entryVar + ":((Map" + genericClause + ")" + variable + ").entrySet()) {");
+        indent();
+        writeLn("if("+entryVar+".getKey() != null) {");
+        indent();
+        valueParm = boxType(valueParm);
+        String value = serializeValue(valueParm, entryVar + ".getValue()");
+        writeLn(mapVar + ".put(" + entryVar + ".getKey()," + value + ");");
+        outdent();
+        writeLn("}");
+        outdent();
+        writeLn("}");
+        return mapVar;
+    }
+
+    private String getTypedValueAssignment(JClassType fieldClassType, String variable) throws NotFoundException{
+        String fieldClassTypeString = fieldClassType.getQualifiedSourceName();
+        if (fieldClassTypeString.equals("java.lang.String")) {
+            return "SerializerHelper.getString((String)"+ variable +")";
+        } else if (fieldClassType.getQualifiedSourceName().equals("java.lang.Boolean")) {
+            return "SerializerHelper.getBoolean((Boolean)"+ variable +")";
+        } else if (fieldClassTypeString.equals("java.lang.Character")) {
+            return "jsonValue=SerializerHelper.getChar((Character)"+ variable +")";
+        } else if (fieldClassType.isAssignableTo(typeOracle.getType("java.lang.Number"))) {
+            return "SerializerHelper.getNumber((Number)"+ variable +")";
+        } else if (fieldClassTypeString.equals("java.util.Date")) {
+            return "SerializerHelper.getDate((Date)"+ variable +")";
+        } else if (fieldClassType.isAssignableTo(MARKER_INTERFACE)) {
+            return "Serializer_TypeSerializer.this.serializeToJson("+ variable +")";
+        } else if (fieldClassType.isEnum() != null) {
+            return variable + ".toString()";
+        }
+
+        return(variable + ".toString()");
+    }
+
+    private void generateDefaultSerialization() {
+        writeLn("public String serialize(Object pojo){");
+        indent();
+        writeLn("return serializeToJson(pojo).toString();");
+        outdent();
+        writeLn("}");
     }
 
     private static String getNameForGS(String name) {
-        StringBuffer buffer = new StringBuffer(name);
+        StringBuilder buffer = new StringBuilder(name);
         buffer.setCharAt(0, new String(new char[]{name.charAt(0)}).toUpperCase().charAt(0));
         return buffer.toString();
+    }
+
+    private String getLoopVarSuffix() {
+        suffixIndex += 1;
+        return Integer.toString(suffixIndex);
     }
 }
