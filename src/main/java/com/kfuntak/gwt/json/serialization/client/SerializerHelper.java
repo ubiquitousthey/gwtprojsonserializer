@@ -1,15 +1,41 @@
 package com.kfuntak.gwt.json.serialization.client;
 
+import java.util.Collection;
 import java.util.Date;
+import java.util.Map;
 
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.json.client.JSONNull;
-import com.google.gwt.json.client.JSONNumber;
-import com.google.gwt.json.client.JSONString;
-import com.google.gwt.json.client.JSONValue;
-import com.google.gwt.json.client.JSONBoolean;
+import com.google.gwt.json.client.*;
 
 public class SerializerHelper {
+    public static JSONValue getCollection(Collection<?> collection, SerializationCallback cb) {
+        if (collection == null) {
+            return JSONNull.getInstance();
+        }
+
+        JSONArray result = new JSONArray();
+        int idx = 0;
+        for (Object item : collection) {
+            JSONValue value = cb.serialize(item);
+            result.set(idx++, value);
+        }
+        return result;
+    }
+
+    public static JSONValue getMap(Map<String, ?> map, SerializationCallback cb) {
+        if (map == null) {
+            return JSONNull.getInstance();
+        }
+
+        JSONObject result = new JSONObject();
+        for (Map.Entry<String, ?> entry : map.entrySet()) {
+            if (entry.getKey() != null) {
+                JSONValue value = cb.serialize(entry.getValue());
+                result.put(entry.getKey(), value);
+            }
+        }
+        return result;
+    }
 
     public static JSONValue getString(String string) {
         if (string == null) {

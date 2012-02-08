@@ -79,6 +79,8 @@ This JSON serializer allows easy connecting GWT client side to any standard serv
     </dependencies>
 
     <build>
+		<sourceDirectory>src/main/java</sourceDirectory>
+		<testSourceDirectory>src/main/test</testSourceDirectory>
         <extensions>
             <extension>
                 <groupId>org.apache.maven.wagon</groupId>
@@ -91,6 +93,11 @@ This JSON serializer allows easy connecting GWT client side to any standard serv
                 <directory>src/main/java</directory>
             </resource>
         </resources>
+		<testResources>
+      		<testResource>
+	    	    <directory>/src/main/test</directory>
+    		</testResource>
+	    </testResources>        
         <plugins>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -133,6 +140,7 @@ This JSON serializer allows easy connecting GWT client side to any standard serv
                 <configuration>
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
+                    <testSource></testSource>
                     <encoding>${project.build.sourceEncoding}</encoding>
                 </configuration>
             </plugin>

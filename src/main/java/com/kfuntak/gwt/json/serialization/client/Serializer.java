@@ -1,5 +1,6 @@
 package com.kfuntak.gwt.json.serialization.client;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,6 +9,8 @@ import com.google.gwt.json.client.JSONException;
 import com.google.gwt.json.client.JSONParser;
 import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.json.client.JSONObject;
+import com.sun.corba.se.impl.encoding.CDROutputObject;
+import com.sun.jdi.InvalidTypeException;
 
 public class Serializer {
 
@@ -46,6 +49,18 @@ public class Serializer {
     }
 
     public String serialize(Object pojo) {
+        try {
+            Collection<?> col = (Collection<?>) pojo;
+            new ArrayListSerializer().serialize(pojo);
+        } catch (ClassCastException e) {
+            GWT.log("Not a Collection");
+        }
+        try {
+            Map<String,?> map = (Map<String,?>) pojo;
+            new HashMapSerializer().serialize(pojo);
+        } catch (ClassCastException e) {
+            GWT.log("Not a Map");
+        }
         String name = getTypeName(pojo);
         ObjectSerializer serializer = getObjectSerializer(name);
         if (serializer == null) {

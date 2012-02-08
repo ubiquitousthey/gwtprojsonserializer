@@ -1,11 +1,36 @@
 package com.kfuntak.gwt.json.serialization.client;
 
-import java.util.Date;
+import java.util.*;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dev.json.JsonValue;
 import com.google.gwt.json.client.*;
+import org.mortbay.util.ajax.JSON;
 
 public class DeserializerHelper {
+    public static <T> void fillMap(Map<String, T> map, JSONValue jsonValue, DeserializationCallback<T> cb) {
+        if (jsonValue != null && !(jsonValue instanceof JSONNull)) {
+            if(!(jsonValue instanceof JSONObject)){
+                throw new IncompatibleObjectException();
+            }
+            for(String key:((JSONObject)jsonValue).keySet()){
+                JSONValue value = ((JSONObject)jsonValue).get(key);
+                map.put(key, cb.deserialize(value));
+            }
+        }
+    }
+
+    public static <T> void fillCollection(Collection<T> col, JSONValue jsonValue, DeserializationCallback<T> cb) {
+        if (jsonValue != null && !(jsonValue instanceof JSONNull)) {
+            if(!(jsonValue instanceof JSONArray)){
+                throw new IncompatibleObjectException();
+            }
+            for(int i=0;i<((JSONArray)jsonValue).size();i++){
+                JSONValue item = ((JSONArray)jsonValue).get(i);
+                col.add(cb.deserialize(item));
+            }
+        }
+    }
 
     public static String getString(JSONValue value) throws JSONException {
         if (value == null || value instanceof JSONNull) {

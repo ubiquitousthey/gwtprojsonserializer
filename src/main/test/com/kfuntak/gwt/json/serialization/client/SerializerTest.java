@@ -107,7 +107,7 @@ public class SerializerTest extends GWTTestCase {
         School school = new School();
         school.setGradeLevels(Arrays.asList("1","2","3"));
         String schoolJson = serializer.serialize(school);
-        String referenceJson = "{\"refIdKey\":null, \"refId\":null, \"schoolName\":null, \"schoolShortName\":null, \"schoolUrl\":null, \"status\":0, \"gradeLevels\":[\"1\",\"2\",\"3\"], \"startDate\":null, \"class\":\"com.kfuntak.gwt.json.serialization.client.domain.School\"}";
+        String referenceJson = "{\"refIdKey\":null, \"refId\":null, \"schoolName\":null, \"schoolShortName\":null, \"schoolUrl\":null, \"status\":0, \"gradeLevels\":[\"1\",\"2\",\"3\"], \"contactInfo\":null, \"startDate\":null, \"class\":\"com.kfuntak.gwt.json.serialization.client.domain.School\"}";
         assertEquals(referenceJson,schoolJson);
     }
 

@@ -16,6 +16,7 @@ import com.google.gwt.core.ext.typeinfo.NotFoundException;
 import com.google.gwt.core.ext.typeinfo.TypeOracle;
 import com.google.gwt.dev.javac.typemodel.JEnumConstant;
 import com.google.gwt.dev.javac.typemodel.JEnumType;
+import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.rebind.ClassSourceFileComposerFactory;
 import com.google.gwt.user.rebind.SourceWriter;
 import com.kfuntak.gwt.json.serialization.client.*;
@@ -312,37 +313,23 @@ public class SerializationGenerator extends Generator {
     }
 
     private String deserializeCollection(JClassType colType, String inputColVar) throws NotFoundException, UnableToCompleteException {
-        writeLn("//deserializeCollection - " + colType.toString() + " - " + inputColVar);
-        // Start deSerilisation
         String loopSuffix = getLoopVarSuffix();
         JParameterizedType parameterizedType = (JParameterizedType) colType;
         JClassType valueType = parameterizedType.getTypeArgs()[0];
+        String valueTypeString = createTypeString(valueType, false);
         String colVar = "col" + loopSuffix;// Field Collection Result
-        String valVar = "val" + loopSuffix;
-        writeLn("JSONValue " + valVar + ";");
-        String indexVar = "idx" + loopSuffix;
-
-        // Object Name
 
         writeLn(createTypeString(colType, false) + " " + colVar + " = new " + createTypeString(colType, true) + "();");
-        writeLn("if (" + inputColVar + " != null && !(" + inputColVar + " instanceof JSONNull)) {");
+        writeLn("DeserializerHelper.fillCollection(" + colVar + ", " + inputColVar + ", new DeserializationCallback() {");
         indent();
-        writeLn("if(!("+inputColVar+" instanceof JSONArray)){");
+        writeLn("public " + valueTypeString + " deserialize(JSONValue jsonValue) {");
         indent();
-        writeLn("throw new IncompatibleObjectException();");
-        outdent();
-        writeLn("}");
-        writeLn("for(int " + indexVar + "=0;" + indexVar + "<((JSONArray)" + inputColVar + ").size();" + indexVar + "++){");
-        indent();
-        // DeSerialise individual elements
-        writeLn(valVar + "=((JSONArray)" + inputColVar + ").get("+indexVar+");");
-
-        String value = deserializeValue(valueType, valVar);
-        writeLn(colVar + ".add(" + value + ");");
+        String value = deserializeValue(valueType, "jsonValue");
+        writeLn("return " + value + ";");
         outdent();
         writeLn("}");
         outdent();
-        writeLn("}");
+        writeLn("});");
         return colVar;
     }
 
@@ -405,39 +392,27 @@ public class SerializationGenerator extends Generator {
     }
     
     private String deserializeMap(JClassType mapType, String inputMapVar) throws UnableToCompleteException, NotFoundException {
-        writeLn("//deserializeMap - " + mapType.toString() + " - " + inputMapVar);
         JParameterizedType parameterizedType = (JParameterizedType) mapType;
         JClassType keyParm = parameterizedType.getTypeArgs()[0];
         JClassType valueParm = parameterizedType.getTypeArgs()[1];
+        String valueTypeString = createTypeString(valueParm, false);
         if(!keyParm.getQualifiedSourceName().equals("java.lang.String")) {
             throw new UnableToCompleteException();
         }
         String loopSuffix = getLoopVarSuffix();
         String mapVar = "map" + loopSuffix;// Field Collection Result
-        String keyVar = "key" + loopSuffix;
-        String valVar = "val" + loopSuffix;
-        // Object Name
 
         writeLn(createTypeString(mapType, false) + " " + mapVar + " = new " + createTypeString(mapType, true) + "();");
-        writeLn("if (" + inputMapVar + " != null && !(" + inputMapVar +" instanceof JSONNull)) {");
+        writeLn("DeserializerHelper.fillMap(" + mapVar + ", " + inputMapVar + ", new DeserializationCallback<"+ valueTypeString +"> () {");
         indent();
-        writeLn("if(!("+inputMapVar+" instanceof JSONObject)){");
+        writeLn("public " + valueTypeString + " deserialize(JSONValue jsonValue) {");
         indent();
-        writeLn("throw new IncompatibleObjectException();");
-        outdent();
-        writeLn("}");
-        writeLn("JSONValue " + valVar + ";");
-        writeLn("for(String " + keyVar + ":((JSONObject)" + inputMapVar + ").keySet()){");
-        indent();
-        // DeSerialise individual elements
-        writeLn(valVar + "=((JSONObject)"+ inputMapVar +").get(" + keyVar + ");");
-
-        String value = deserializeValue(valueParm, valVar);
-        writeLn(mapVar + ".put(" + keyVar + "," + value + ");");
+        String value = deserializeValue(valueParm, "jsonValue");
+        writeLn("return " + value + ";");
         outdent();
         writeLn("}");
         outdent();
-        writeLn("}");
+        writeLn("});");
         return mapVar;
     }
 
@@ -466,6 +441,7 @@ public class SerializationGenerator extends Generator {
     }
 
     private String serializeEnum(JEnumType enumType, String inputValVar) {
+        writeLn("//Serialize Enum");
         String enumVar = "enum" + getLoopVarSuffix();
         writeLn("JSONValue " + enumVar + " = JSONNull.getInstance();");
         writeLn("switch(("+ enumType.getSimpleSourceName() +")"+inputValVar+") {");
@@ -616,32 +592,29 @@ public class SerializationGenerator extends Generator {
     }
 
     private String serializeCollection(JClassType fieldClassType, String variable) throws NotFoundException, UnableToCompleteException {
-        // Serialise collection
+        writeLn("//Serialize Collection");
         JParameterizedType parameterizedType = (JParameterizedType) fieldClassType;
         JClassType typeParm = parameterizedType.getTypeArgs()[0];
         String typeParmName = createTypeString(typeParm, false);
         String suffix = getLoopVarSuffix();
         String colVar = "col"+suffix;
-        String valVar = "val"+suffix;
-        String indexVar = "idx"+suffix;
-        writeLn("JSONArray " + colVar + "=null;");
-        writeLn("if(" + variable + " != null){");
+        writeLn("JSONValue " + colVar + " = SerializerHelper.getCollection((Collection<" + typeParmName + ">)" + variable + ", new SerializationCallback() {");
         indent();
-        writeLn(colVar + "= new JSONArray();");
-        writeLn("int " + indexVar + "=0;");
-        writeLn("for(" + typeParmName + " " + valVar + " : (Collection<" + typeParmName + ">)"+variable+"){");
+        writeLn("public JSONValue serialize(Object value) {");
         indent();
         typeParm = boxType(typeParm);
-        String value = serializeValue(typeParm, valVar);
-        writeLn(colVar + ".set(" + indexVar + "++," + value + ");");
+        String value = serializeValue(typeParm, "value");
+        writeLn("return " + value + ";");
         outdent();
         writeLn("}");
         outdent();
-        writeLn("}");
+        writeLn("});");
+
         return colVar;
     }
 
     private String serializeValue(JClassType typeParm, String valVar) throws NotFoundException, UnableToCompleteException {
+        writeLn("//Serialize Value");
         String value;
         if (typeParm.isAssignableTo(typeOracle.getType("java.util.Collection"))) {
             value = serializeCollection(typeParm, valVar);
@@ -656,6 +629,7 @@ public class SerializationGenerator extends Generator {
     }
 
     private String serializeMap(JClassType fieldClassType, String variable) throws NotFoundException, UnableToCompleteException {
+        writeLn("//Serialize Map");
         JParameterizedType parameterizedType = (JParameterizedType) fieldClassType;
         JClassType keyParm = parameterizedType.getTypeArgs()[0];
         if(!keyParm.getQualifiedSourceName().equals("java.lang.String")) {
@@ -665,19 +639,17 @@ public class SerializationGenerator extends Generator {
         String genericClause = createTypeParmString(parameterizedType);
         String suffix = getLoopVarSuffix();
         String mapVar = "map" + suffix;
-        String entryVar = "entry" + suffix;
-        writeLn("JSONObject " + mapVar + " = new JSONObject();");
-        writeLn("for(Map.Entry" + genericClause + " " + entryVar + ":((Map" + genericClause + ")" + variable + ").entrySet()) {");
+        writeLn("JSONValue "+ mapVar + " = SerializerHelper.getMap((Map" + genericClause + ")" + variable + ", new SerializationCallback () {");
         indent();
-        writeLn("if("+entryVar+".getKey() != null) {");
+        writeLn("public JSONValue serialize(Object value) {");
         indent();
         valueParm = boxType(valueParm);
-        String value = serializeValue(valueParm, entryVar + ".getValue()");
-        writeLn(mapVar + ".put(" + entryVar + ".getKey()," + value + ");");
+        String value = serializeValue(valueParm, "value");
+        writeLn("return " + value + ";");
         outdent();
         writeLn("}");
         outdent();
-        writeLn("}");
+        writeLn("});");
         return mapVar;
     }
 

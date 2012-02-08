@@ -5,13 +5,6 @@ import com.google.gwt.json.client.*;
 import java.util.ArrayList;
 import java.util.Collection;
 
-/**
- * Created by IntelliJ IDEA.
- * User: hrobinson
- * Date: 2/2/12
- * Time: 2:52 PM
- * To change this template use File | Settings | File Templates.
- */
 public class ArrayListSerializer implements ObjectSerializer{
     public String serialize(Object pojo) {
         return serializeToJson(pojo).toString();
