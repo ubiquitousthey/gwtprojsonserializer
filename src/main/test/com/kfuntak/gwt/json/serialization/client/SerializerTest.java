@@ -50,6 +50,28 @@ public class SerializerTest extends GWTTestCase {
     }
 
     @Test
+    public void testMarshallHelperSerialize()
+    {
+        HashMap<String, String> map = new HashMap<String, String>();
+        map.put("name", "Heath");
+        map.put("age", "36");
+        map.put("city", "Temple");
+        String info = Serializer.marshall(map);
+        assertEquals("{\"age\":\"36\", \"name\":\"Heath\", \"city\":\"Temple\"}",info);
+    }
+
+    @Test
+    public void testMarshallHelperDeserialize() {
+        String listJson = "[\"Heath\",\"Pax\",\"Soren\",\"Gage\"]";
+        ArrayList<String> elist = new ArrayList<String>();
+        elist.add("Heath");
+        elist.add("Pax");
+        elist.add("Soren");
+        elist.add("Gage");
+        assertEquals(elist,Serializer.<ArrayList<String>>marshall(listJson,elist.getClass().getName()));
+    }
+
+    @Test
     public void testDeserializeArbitraryArrayList() {
         Serializer serializer = (Serializer) GWT.create(Serializer.class);
         String listJson = "[\"Heath\",\"Pax\",\"Soren\",\"Gage\"]";

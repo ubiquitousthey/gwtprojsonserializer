@@ -9,8 +9,6 @@ import com.google.gwt.json.client.JSONException;
 import com.google.gwt.json.client.JSONParser;
 import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.json.client.JSONObject;
-import com.sun.corba.se.impl.encoding.CDROutputObject;
-import com.sun.jdi.InvalidTypeException;
 
 public class Serializer {
 
@@ -111,5 +109,29 @@ public class Serializer {
         }
 
         throw new IllegalArgumentException("Json string must contain \"class\" key.");
+    }
+
+    public static <T> T marshall(String data, String typeString) {
+        if(GWT.isClient() && data != null && !data.isEmpty()){
+            Serializer serializer = new Serializer();
+            return (T)serializer.deSerialize(data, typeString);
+        }
+        return null;
+    }
+
+    public static <T> T marshall(String data) {
+        if(GWT.isClient() && data != null && !data.isEmpty()){
+            Serializer serializer = new Serializer();
+            return (T)serializer.deSerialize(data);
+        }
+        return null;
+    }
+
+    public static String marshall(Object object) {
+        if (GWT.isClient() && object != null) {
+            Serializer serializer = new Serializer();
+            return serializer.serialize(object);
+        }
+        return "";
     }
 }
