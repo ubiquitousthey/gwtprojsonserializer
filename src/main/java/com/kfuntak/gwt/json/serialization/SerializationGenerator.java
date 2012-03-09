@@ -574,8 +574,8 @@ public class SerializationGenerator extends Generator {
         writeLn("}");
     }
 
-    private String getGetter(JType fieldType, String fieldName) {
-        if (fieldType.getQualifiedSourceName().equals("java.lang.Boolean")) {
+    private String getGetter(JType fieldType, String fieldName) throws NotFoundException {
+        if (boxType(fieldType).getQualifiedSourceName().equals("java.lang.Boolean")) {
             return "is" + fieldName;
         } else {
             return "get" + fieldName;

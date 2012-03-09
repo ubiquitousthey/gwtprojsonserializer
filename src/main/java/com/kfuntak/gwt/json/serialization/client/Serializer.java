@@ -112,26 +112,49 @@ public class Serializer {
     }
 
     public static <T> T marshall(String data, String typeString) {
-        if(GWT.isClient() && data != null && !data.isEmpty()){
-            Serializer serializer = new Serializer();
-            return (T)serializer.deSerialize(data, typeString);
-        }
-        return null;
+        return marshall(data, typeString, null);
     }
 
     public static <T> T marshall(String data) {
-        if(GWT.isClient() && data != null && !data.isEmpty()){
-            Serializer serializer = new Serializer();
-            return (T)serializer.deSerialize(data);
-        }
-        return null;
+        return marshall(data);
     }
 
-    public static String marshall(Object object) {
+    public static <T> T marshall(String data, String typeString, T defaultValue) {
+        if(GWT.isClient() && data != null && !data.isEmpty()){
+            Serializer serializer = new Serializer();
+            T object = (T)serializer.deSerialize(data, typeString);
+            if (object == null) {
+                return defaultValue;
+            } else {
+                return object;
+            }
+
+        }
+        return defaultValue;
+    }
+
+    public static <T> T marshall(String data, T defaultValue) {
+        if(GWT.isClient() && data != null && !data.isEmpty()){
+            Serializer serializer = new Serializer();
+            T object = (T)serializer.deSerialize(data);
+            if (object == null) {
+                return defaultValue;
+            } else {
+                return object;
+            }
+        }
+        return defaultValue;
+    }
+
+    public static String marshall(Object object, String defaultValue) {
         if (GWT.isClient() && object != null) {
             Serializer serializer = new Serializer();
             return serializer.serialize(object);
         }
-        return "";
+        return defaultValue;
+    }
+
+    public static String marshall(Object object) {
+        return marshall(object, "");
     }
 }
