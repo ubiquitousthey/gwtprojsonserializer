@@ -490,7 +490,7 @@ public class SerializationGenerator extends Generator {
         writeLn(fieldClassType.getName() + " " + typeVar + " = null;");
         writeLn("if (" + inputTypeVar + " != null && !(" + inputTypeVar + " instanceof JSONNull)){");
         indent();
-        writeLn(typeVar + " = " + "(" + fieldClassType.getSimpleSourceName() + ")Serializer_TypeSerializer.this.deSerialize(" + inputTypeVar + ");");
+        writeLn(typeVar + " = " + "(" + fieldClassType.getSimpleSourceName() + ")Serializer_TypeSerializer.this.deSerialize(" + inputTypeVar + ", \""+fieldClassType.getQualifiedSourceName()+"\");");
         outdent();
         writeLn("}");
         return typeVar;
@@ -558,8 +558,10 @@ public class SerializationGenerator extends Generator {
             writeLn("mainResult.put(\"" + fieldName + "\"," + value + ");");
         }
 
-        // Put class type for compatibility with flex JSON [de]serialisation
-        writeLn("mainResult.put(\"class\",new JSONString(\"" + baseType.getQualifiedSourceName() + "\"));");
+        if(!typeToSerialize.isAnnotationPresent(DontSerializeClass.class)){
+            // Put class type for compatibility with flex JSON [de]serialisation
+            writeLn("mainResult.put(\"class\",new JSONString(\"" + baseType.getQualifiedSourceName() + "\"));");
+        }
 
         // Return statement
         writeLn("return mainResult;");
