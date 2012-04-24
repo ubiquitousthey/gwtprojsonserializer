@@ -52,16 +52,6 @@ public class Serializer {
     }
 
     public String serialize(Object pojo) {
-        try {
-            Collection<?> col = (Collection<?>) pojo;
-            new ArrayListSerializer().serialize(pojo);
-        } catch (ClassCastException e) {
-        }
-        try {
-            Map<String,?> map = (Map<String,?>) pojo;
-            new HashMapSerializer().serialize(pojo);
-        } catch (ClassCastException e) {
-        }
         String name = getTypeName(pojo);
         return getObjectSerializer(name).serialize(pojo);
     }
