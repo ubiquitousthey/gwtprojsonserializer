@@ -1,3 +1,6 @@
 *.iws
 *.iml
 *.ipr
+war/
+target/
+gwt-unitCache/

@@ -113,12 +113,9 @@ public class SerializationGenerator extends Generator {
         String serializerName = typeToSerialize.getName().replaceAll("\\.","\\$");
         writeLn("public class " + serializerName + "_SerializableImpl implements ObjectSerializer{");
         indent();
-        writeLn("public " + serializerName + "_SerializableImpl(){}");
 
         try {
-            generateDefaultSerialization();
-            generateTypeSerialization(typeToSerialize.getQualifiedSourceName());
-            generateDefaultDeserialization(typeToSerialize.getQualifiedSourceName());
+            generateTypeSerialization(typeToSerialize);
             generateTypeDeserialization(typeToSerialize.getQualifiedSourceName());
 
         } catch (NotFoundException e) {
@@ -228,9 +225,8 @@ public class SerializationGenerator extends Generator {
         JClassType baseType = typeOracle.getType(typeName);
         String packageName = baseType.getPackage().getName();
 
-        writeLn("public Object deSerialize(JSONValue jsonValue, String className) throws JSONException{");
+        writeLn("public Object deSerialize(JSONValue jsonValue) throws JSONException{");
         indent();
-        //writeLn("serializer = GWT.create(Serializer.class);");
         // Return null if the given object is null
         writeLn("if(jsonValue instanceof JSONNull){");
         indent();
@@ -500,20 +496,12 @@ public class SerializationGenerator extends Generator {
         return typeVar;
     }
 
-    private void generateDefaultDeserialization(String className) {
-        writeLn("public Object deSerialize(String jsonString, String className) throws JSONException{");
-        indent();
-        writeLn("return deSerialize(JSONParser.parse(jsonString), \"" + className + "\");");
-        outdent();
-        writeLn("}");
-    }
-
-    private void generateTypeSerialization(String typeName) throws NotFoundException, UnableToCompleteException {
+    private void generateTypeSerialization(JClassType typeToSerialize) throws NotFoundException, UnableToCompleteException {
+        String typeName = typeToSerialize.getQualifiedSourceName();
 
         JClassType baseType = typeOracle.getType(typeName);
         writeLn("public JSONValue serializeToJson(Object object){");
         indent();
-        //writeLn("serializer = GWT.create(Serializer.class);");
         // Return JSONNull instance if object is null
         writeLn("if(object==null){");
         indent();
@@ -704,14 +692,6 @@ public class SerializationGenerator extends Generator {
         }
 
         return(variable + ".toString()");
-    }
-
-    private void generateDefaultSerialization() {
-        writeLn("public String serialize(Object pojo){");
-        indent();
-        writeLn("return serializeToJson(pojo).toString();");
-        outdent();
-        writeLn("}");
     }
 
     private static String getNameForGS(String name) {

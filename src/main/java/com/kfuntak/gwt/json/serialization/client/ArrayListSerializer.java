@@ -6,10 +6,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 public class ArrayListSerializer implements ObjectSerializer{
-    public String serialize(Object pojo) {
-        return serializeToJson(pojo).toString();
-    }
-
     public JSONValue serializeToJson(Object pojo) {
         if(!(pojo instanceof Collection)){
             throw new IllegalArgumentException();
@@ -24,7 +20,7 @@ public class ArrayListSerializer implements ObjectSerializer{
         return jsonList;
     }
 
-    public Object deSerialize(JSONValue jsonValue, String className) throws JSONException {
+    public Object deSerialize(JSONValue jsonValue) throws JSONException {
         JSONArray jsonArray = jsonValue.isArray();
         if (jsonArray == null) {
             throw new IllegalArgumentException("Json value was not an array");
@@ -36,9 +32,5 @@ public class ArrayListSerializer implements ObjectSerializer{
         }
 
         return list;
-    }
-
-    public Object deSerialize(String jsonString, String className) throws JSONException {
-        return deSerialize(JSONParser.parseLenient(jsonString), className);
     }
 }

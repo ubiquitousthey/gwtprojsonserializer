@@ -2,21 +2,11 @@ package com.kfuntak.gwt.json.serialization.client;
 
 import com.google.gwt.json.client.*;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Created by IntelliJ IDEA.
- * User: hrobinson
- * Date: 2/2/12
- * Time: 2:52 PM
- * To change this template use File | Settings | File Templates.
- */
+@SuppressWarnings("unchecked")
 public class HashMapSerializer implements ObjectSerializer{
-    public String serialize(Object pojo) {
-        return serializeToJson(pojo).toString();
-    }
 
     public JSONValue serializeToJson(Object pojo) {
         if(!(pojo instanceof Map)){
@@ -30,7 +20,7 @@ public class HashMapSerializer implements ObjectSerializer{
         return json;
     }
 
-    public Object deSerialize(JSONValue jsonValue, String className) throws JSONException {
+    public Object deSerialize(JSONValue jsonValue) throws JSONException {
         JSONObject jsonObject = jsonValue.isObject();
         if (jsonObject == null) {
             throw new IllegalArgumentException("Json value was not a json object");
@@ -42,9 +32,5 @@ public class HashMapSerializer implements ObjectSerializer{
         }
 
         return map;
-    }
-
-    public Object deSerialize(String jsonString, String className) throws JSONException {
-        return deSerialize(JSONParser.parseLenient(jsonString), className);
     }
 }

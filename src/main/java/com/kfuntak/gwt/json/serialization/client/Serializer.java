@@ -1,6 +1,5 @@
 package com.kfuntak.gwt.json.serialization.client;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,21 +38,21 @@ public class Serializer {
         }
     }
 
+    private String extractClassName(JSONValue jsonValue) {
+        JSONObject obj = jsonValue.isObject();
+        if (obj != null) {
+            if (obj.containsKey("class") && obj.get("class").isString() != null) {
+                return obj.get("class").isString().stringValue();
+            }
+        }
+        throw new IllegalArgumentException("Json string must contain \"class\" key.");
+    }
+
     protected Serializer() {
     }
 
-    static protected String getTypeName(Object obj) {
-        // WARNING: GWT.getTypeName is deprecated
-        //String typeName = GWT.getTypeName( obj );
-        //typeName = typeName.substring(typeName.lastIndexOf('.')+1);
-        //return typeName.toLowerCase();
-        String typeName = obj.getClass().getName();
-        return typeName;
-    }
-
     public String serialize(Object pojo) {
-        String name = getTypeName(pojo);
-        return getObjectSerializer(name).serialize(pojo);
+        return serializeToJson(pojo).toString();
     }
 
     public JSONValue serializeToJson(Object pojo) {
@@ -61,31 +60,28 @@ public class Serializer {
             return null;
         }
 
-        String name = getTypeName(pojo);
+        String name = pojo.getClass().getName();
         return getObjectSerializer(name).serializeToJson(pojo);
     }
 
     public Object deSerialize(JSONValue jsonValue, String className) throws JSONException {
-        return getObjectSerializer(className).deSerialize(jsonValue, className);
+        if(className == null){
+            className = extractClassName(jsonValue);
+        }
+        return getObjectSerializer(className).deSerialize(jsonValue);
     }
 
     public Object deSerialize(String jsonString, String className) throws JSONException {
-        return getObjectSerializer(className).deSerialize(jsonString, className);
+        JSONValue jsonValue = JSONParser.parseLenient(jsonString);
+        return deSerialize(jsonValue, className);
     }
 
     public Object deSerialize(String jsonString) {
-        return deSerialize(JSONParser.parseLenient(jsonString));
+        return deSerialize(jsonString, null);
     }
 
-    public Object deSerialize(JSONValue jsonValue) {
-        JSONObject obj = jsonValue.isObject();
-        if (obj != null) {
-            if (obj.containsKey("class") && obj.get("class").isString() != null) {
-                return deSerialize(jsonValue, obj.get("class").isString().stringValue());
-            }
-        }
-
-        throw new IllegalArgumentException("Json string must contain \"class\" key.");
+    public Object deSerialize(JSONValue jsonValue) throws JSONException {
+        return deSerialize(jsonValue, null);
     }
 
     public static <T> T marshall(String data, String typeString) {
@@ -111,16 +107,7 @@ public class Serializer {
     }
 
     public static <T> T marshall(String data, T defaultValue) {
-        if(GWT.isClient() && data != null && !data.isEmpty()){
-            Serializer serializer = new Serializer();
-            T object = (T)serializer.deSerialize(data);
-            if (object == null) {
-                return defaultValue;
-            } else {
-                return object;
-            }
-        }
-        return defaultValue;
+		return marshall(data, null, defaultValue);
     }
 
     public static String marshall(Object object, String defaultValue) {
