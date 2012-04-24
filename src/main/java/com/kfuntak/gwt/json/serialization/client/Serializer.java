@@ -103,7 +103,7 @@ public class Serializer {
     }
 
     public static <T> T marshall(String data) {
-        return marshall(data);
+        return marshall(data, null, null);
     }
 
     public static <T> T marshall(String data, String typeString, T defaultValue) {
