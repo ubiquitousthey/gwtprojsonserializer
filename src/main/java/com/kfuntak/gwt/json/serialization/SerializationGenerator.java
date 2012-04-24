@@ -190,7 +190,7 @@ public class SerializationGenerator extends Generator {
 
     private void addObjectSerializer(Map.Entry<String, JClassType> entry) {
         writeLn("addObjectSerializer(\"" + entry.getValue().getQualifiedSourceName() + "\", new " + entry.getKey() + "_SerializableImpl() );");
-        if (entry.getValue().getQualifiedSourceName() != entry.getValue().getQualifiedBinaryName()) {
+        if (!entry.getValue().getQualifiedSourceName().equals(entry.getValue().getQualifiedBinaryName())) {
             writeLn("addObjectSerializer(\"" + entry.getValue().getQualifiedBinaryName() + "\", new " + entry.getKey() + "_SerializableImpl() );");
         }
     }
