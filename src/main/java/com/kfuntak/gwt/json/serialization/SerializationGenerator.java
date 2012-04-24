@@ -7,13 +7,7 @@ import com.google.gwt.core.ext.Generator;
 import com.google.gwt.core.ext.GeneratorContext;
 import com.google.gwt.core.ext.TreeLogger;
 import com.google.gwt.core.ext.UnableToCompleteException;
-import com.google.gwt.core.ext.typeinfo.JClassType;
-import com.google.gwt.core.ext.typeinfo.JField;
-import com.google.gwt.core.ext.typeinfo.JParameterizedType;
-import com.google.gwt.core.ext.typeinfo.JPrimitiveType;
-import com.google.gwt.core.ext.typeinfo.JType;
-import com.google.gwt.core.ext.typeinfo.NotFoundException;
-import com.google.gwt.core.ext.typeinfo.TypeOracle;
+import com.google.gwt.core.ext.typeinfo.*;
 import com.google.gwt.dev.javac.typemodel.JEnumConstant;
 import com.google.gwt.dev.javac.typemodel.JEnumType;
 import com.google.gwt.json.client.JSONValue;
@@ -292,24 +286,37 @@ public class SerializationGenerator extends Generator {
         for (JField field : fields) {
             JType fieldType = field.getType();
             String fieldName = field.getName();
-            String fieldNameForGS = getNameForGS(fieldName);
             writeLn("fieldJsonValue=jsonObject.get(\"" + fieldName + "\");");
             if (fieldType.isPrimitive() != null) {
                 JPrimitiveType fieldPrimitiveType = (JPrimitiveType) fieldType;
                 JClassType fieldBoxedType = typeOracle.getType(fieldPrimitiveType.getQualifiedBoxedSourceName());
                 String valueString = deserializeSimpleType(fieldBoxedType, "fieldJsonValue");
-                writeLn("mainResult.set" + fieldNameForGS + "(" + valueString + ");");
+                setValue("mainResult", baseType, field, valueString);
             } else {
                 // Return null if JSON object is null
                 JClassType fieldClassType = (JClassType) fieldType;
                 String value = deserializeValue(fieldClassType, "fieldJsonValue");
-                writeLn("mainResult.set" + fieldNameForGS + "(" + value + ");");
+                setValue("mainResult", baseType, field, value);
             }
         }
 
         writeLn("return mainResult;");
         outdent();
         writeLn("}");
+    }
+
+    private void setValue(String dest, JClassType classType, JField field, String value) {
+        String fieldNameForGS = getNameForGS(field.getName());
+        Set<? extends JClassType> classes = classType.getFlattenedSupertypeHierarchy();
+        String setter = "set" + fieldNameForGS;
+        for (JClassType aClass : classes) {
+            JMethod method = aClass.findMethod(setter, new JType[]{field.getType()});
+            if (method != null) {
+                writeLn(dest + ".set" + fieldNameForGS + "(" + value + ");");
+                return;
+            }
+        }
+        writeLn(dest + "." + field.getName() + "=" + value + ";");
     }
 
     private String deserializeCollection(JClassType colType, String inputColVar) throws NotFoundException, UnableToCompleteException {
@@ -557,9 +564,7 @@ public class SerializationGenerator extends Generator {
         for (JField field : fields) {
             JType fieldType = field.getType();
             String fieldName = field.getName();
-            String getter = getGetter(fieldType, getNameForGS(fieldName));
-            // Get field value for object
-            writeLn("fieldValue=mainVariable." + getter + "();");
+            assignValue("fieldValue", baseType, field);
             JClassType fieldClassType = boxType(fieldType);
             String value = serializeValue(fieldClassType, "fieldValue");
             writeLn("mainResult.put(\"" + fieldName + "\"," + value + ");");
@@ -574,12 +579,39 @@ public class SerializationGenerator extends Generator {
         writeLn("}");
     }
 
-    private String getGetter(JType fieldType, String fieldName) throws NotFoundException {
-        if (boxType(fieldType).getQualifiedSourceName().equals("java.lang.Boolean")) {
-            return "is" + fieldName;
+    private void assignValue(String lvalue, JClassType classType, JField field) throws NotFoundException {
+        String getter = getGetter(classType, field);
+        if(getter != null) {
+            writeLn(lvalue + "=mainVariable." + getter + "();");
         } else {
-            return "get" + fieldName;
+            writeLn(lvalue + "=mainVariable." + field.getName() + ";");
         }
+    }
+
+    private String getGetter(JClassType classType, JField field) throws NotFoundException {
+        String getter = null;
+        String fieldNameForGS = getNameForGS(field.getName());
+        Set<? extends JClassType> classes = classType.getFlattenedSupertypeHierarchy();
+
+        if (boxType(field.getType()).getQualifiedSourceName().equals("java.lang.Boolean")) {
+            getter = "is" + fieldNameForGS;
+            for (JClassType aClass : classes) {
+                JMethod method =  aClass.findMethod(getter, new JType[0]);
+                if (method != null) {
+                    return getter;
+                }
+            }
+        }
+
+        getter = "get" + fieldNameForGS;
+        for (JClassType aClass : classes) {
+            JMethod method =  aClass.findMethod(getter, new JType[0]);
+            if (method != null) {
+                return getter;
+            }
+        }
+
+        return null;
     }
 
     private JClassType boxType(JType fieldType) throws NotFoundException {

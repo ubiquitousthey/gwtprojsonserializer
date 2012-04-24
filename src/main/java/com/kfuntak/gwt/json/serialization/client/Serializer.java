@@ -51,13 +51,11 @@ public class Serializer {
             Collection<?> col = (Collection<?>) pojo;
             new ArrayListSerializer().serialize(pojo);
         } catch (ClassCastException e) {
-            GWT.log("Not a Collection");
         }
         try {
             Map<String,?> map = (Map<String,?>) pojo;
             new HashMapSerializer().serialize(pojo);
         } catch (ClassCastException e) {
-            GWT.log("Not a Map");
         }
         String name = getTypeName(pojo);
         ObjectSerializer serializer = getObjectSerializer(name);
