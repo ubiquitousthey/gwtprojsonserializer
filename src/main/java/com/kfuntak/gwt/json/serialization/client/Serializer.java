@@ -31,7 +31,12 @@ public class Serializer {
         } else if (name.equals("java.util.HashMap")) {
             return new HashMapSerializer();
         }
-        return (ObjectSerializer) serializableTypes().get(name);
+
+        if(serializableTypes().containsKey(name)){
+            return (ObjectSerializer) serializableTypes().get(name);
+        } else {
+            throw new SerializationException("Can't find object serializer for " + name);
+        }
     }
 
     protected Serializer() {
@@ -58,11 +63,7 @@ public class Serializer {
         } catch (ClassCastException e) {
         }
         String name = getTypeName(pojo);
-        ObjectSerializer serializer = getObjectSerializer(name);
-        if (serializer == null) {
-            throw new SerializationException("Can't find object serializer for " + name);
-        }
-        return serializer.serialize(pojo);
+        return getObjectSerializer(name).serialize(pojo);
     }
 
     public JSONValue serializeToJson(Object pojo) {
@@ -71,27 +72,15 @@ public class Serializer {
         }
 
         String name = getTypeName(pojo);
-        ObjectSerializer serializer = getObjectSerializer(name);
-        if (serializer == null) {
-            throw new SerializationException("Can't find object serializer for " + name);
-        }
-        return serializer.serializeToJson(pojo);
+        return getObjectSerializer(name).serializeToJson(pojo);
     }
 
     public Object deSerialize(JSONValue jsonValue, String className) throws JSONException {
-        ObjectSerializer serializer = getObjectSerializer(className);
-        if (serializer == null) {
-            throw new SerializationException("Can't find object serializer for " + className);
-        }
-        return serializer.deSerialize(jsonValue, className);
+        return getObjectSerializer(className).deSerialize(jsonValue, className);
     }
 
     public Object deSerialize(String jsonString, String className) throws JSONException {
-        ObjectSerializer serializer = getObjectSerializer(className);
-        if (serializer == null) {
-            throw new SerializationException("Can't find object serializer for " + className);
-        }
-        return serializer.deSerialize(jsonString, className);
+        return getObjectSerializer(className).deSerialize(jsonString, className);
     }
 
     public Object deSerialize(String jsonString) {
