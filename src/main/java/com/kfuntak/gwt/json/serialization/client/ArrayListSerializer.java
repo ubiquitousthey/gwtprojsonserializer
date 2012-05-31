@@ -6,6 +6,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 public class ArrayListSerializer implements ObjectSerializer{
+    String elementClassName = null;
+    public ArrayListSerializer(String className) {
+        elementClassName = className;
+    }
+
+    public ArrayListSerializer() {}
+
     public JSONValue serializeToJson(Object pojo) {
         if(!(pojo instanceof Collection)){
             throw new IllegalArgumentException();
@@ -28,7 +35,11 @@ public class ArrayListSerializer implements ObjectSerializer{
         ArrayList<Object> list = new ArrayList<Object>();
         for (int i = 0; i < jsonArray.size(); i++) {
             JSONValue value = jsonArray.get(i);
-            list.add(DeserializerHelper.getValue(value));
+            if(elementClassName != null) {
+                list.add(DeserializerHelper.getObject(value, elementClassName));
+            } else {
+                list.add(DeserializerHelper.getValue(value));
+            }
         }
 
         return list;

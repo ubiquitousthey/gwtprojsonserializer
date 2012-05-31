@@ -200,4 +200,9 @@ public class DeserializerHelper {
         Serializer serializer = GWT.create(Serializer.class);
         return serializer.deSerialize(value, "java.util.HashMap");
     }
+
+    public static Object getObject(JSONValue value, String elementClassName) {
+        Serializer serializer = GWT.create(Serializer.class);
+        return serializer.deSerialize(value, elementClassName);
+    }
 }

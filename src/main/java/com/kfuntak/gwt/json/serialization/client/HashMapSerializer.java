@@ -7,6 +7,13 @@ import java.util.Map;
 
 @SuppressWarnings("unchecked")
 public class HashMapSerializer implements ObjectSerializer{
+    String valueClassName = null;
+
+    public HashMapSerializer() {}
+
+    public HashMapSerializer(String className) {
+        valueClassName = className;
+    }
 
     public JSONValue serializeToJson(Object pojo) {
         if(!(pojo instanceof Map)){
@@ -28,7 +35,11 @@ public class HashMapSerializer implements ObjectSerializer{
 
         HashMap<String,Object> map = new HashMap<String, Object>();
         for (String key : jsonObject.keySet()) {
-            map.put(key, DeserializerHelper.getValue(jsonObject.get(key)));
+            if(valueClassName != null){
+                map.put(key, DeserializerHelper.getObject(jsonObject.get(key), valueClassName));
+            } else {
+                map.put(key, DeserializerHelper.getValue(jsonObject.get(key)));
+            }
         }
 
         return map;

@@ -76,6 +76,25 @@ public class Serializer {
         return deSerialize(jsonValue, className);
     }
 
+    public Object deSerializeArray(String jsonString, String className) throws JSONException {
+        JSONValue jsonValue = JSONParser.parseLenient(jsonString);
+        return new ArrayListSerializer(className).deSerialize(jsonValue);
+    }
+
+    public Object deSerializeArray(JSONValue jsonValue, String className) throws JSONException {
+        return new ArrayListSerializer(className).deSerialize(jsonValue);
+    }
+
+    public Object deSerializeMap(String jsonString, String className) throws JSONException {
+        JSONValue jsonValue = JSONParser.parseLenient(jsonString);
+        return new HashMapSerializer(className).deSerialize(jsonValue);
+    }
+
+    public Object deSerializeMap(JSONValue jsonValue, String className) throws JSONException {
+        return new HashMapSerializer(className).deSerialize(jsonValue);
+    }
+
+
     public Object deSerialize(String jsonString) {
         return deSerialize(jsonString, null);
     }
