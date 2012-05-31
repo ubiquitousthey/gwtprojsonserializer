@@ -490,6 +490,7 @@ public class SerializationGenerator extends Generator {
         writeLn(fieldClassType.getName() + " " + typeVar + " = null;");
         writeLn("if (" + inputTypeVar + " != null && !(" + inputTypeVar + " instanceof JSONNull)){");
         indent();
+
         writeLn(typeVar + " = " + "(" + fieldClassType.getSimpleSourceName() + ")Serializer_TypeSerializer.this.deSerialize(" + inputTypeVar + ", \""+fieldClassType.getQualifiedSourceName()+"\");");
         outdent();
         writeLn("}");

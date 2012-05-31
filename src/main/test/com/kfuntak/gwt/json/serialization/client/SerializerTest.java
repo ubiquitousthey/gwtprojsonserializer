@@ -27,6 +27,18 @@ public class SerializerTest extends GWTTestCase {
     }
 
     @Test
+    public void testTypeSerialization() {
+        Student s = new Student();
+        s.school = new University();
+        s.contact = new Contact();
+        Serializer serializer = (Serializer) GWT.create(Serializer.class);
+        String ser = serializer.serialize(s);
+        System.out.println(ser);
+        Student s2 = (Student) serializer.deSerialize(ser);
+        assertEquals(s.school, s2.school);
+    }
+
+    @Test
     public void testSerializeArbirtraryArrayList() {
         Serializer serializer = (Serializer) GWT.create(Serializer.class);
         ArrayList<String> list = new ArrayList<String>();

@@ -45,7 +45,7 @@ public class Serializer {
                 return obj.get("class").isString().stringValue();
             }
         }
-        throw new IllegalArgumentException("Json string must contain \"class\" key.");
+        return null;
     }
 
     protected Serializer() {
@@ -65,9 +65,15 @@ public class Serializer {
     }
 
     public Object deSerialize(JSONValue jsonValue, String className) throws JSONException {
-        if(className == null){
-            className = extractClassName(jsonValue);
+        String serializeClassName = extractClassName(jsonValue);
+        if(serializeClassName != null && !serializeClassName.equals(className)){
+            className = serializeClassName;
         }
+
+        if (className == null) {
+            throw new IllegalArgumentException("Json string must contain \"class\" key.");
+        }
+
         return getObjectSerializer(className).deSerialize(jsonValue);
     }
 
