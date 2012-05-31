@@ -5,7 +5,7 @@ import com.google.gwt.json.client.*;
 import java.util.ArrayList;
 import java.util.Collection;
 
-public class ArrayListSerializer implements ObjectSerializer{
+public class ArrayListSerializer extends AbstractObjectSerializer {
     String elementClassName = null;
     public ArrayListSerializer(String className) {
         elementClassName = className;
@@ -27,7 +27,8 @@ public class ArrayListSerializer implements ObjectSerializer{
         return jsonList;
     }
 
-    public Object deSerialize(JSONValue jsonValue) throws JSONException {
+    @Override
+    public Object deSerialize(JSONValue jsonValue, String className) throws JSONException {
         JSONArray jsonArray = jsonValue.isArray();
         if (jsonArray == null) {
             throw new IllegalArgumentException("Json value was not an array");
@@ -36,12 +37,16 @@ public class ArrayListSerializer implements ObjectSerializer{
         for (int i = 0; i < jsonArray.size(); i++) {
             JSONValue value = jsonArray.get(i);
             if(elementClassName != null) {
-                list.add(DeserializerHelper.getObject(value, elementClassName));
+                list.add(DeserializerHelper.getObject(value, className));
             } else {
                 list.add(DeserializerHelper.getValue(value));
             }
         }
 
         return list;
+    }
+
+    public Object deSerialize(JSONValue jsonValue) throws JSONException {
+        return deSerialize(jsonValue, elementClassName);
     }
 }

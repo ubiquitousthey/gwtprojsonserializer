@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @SuppressWarnings("unchecked")
-public class HashMapSerializer implements ObjectSerializer{
+public class HashMapSerializer extends AbstractObjectSerializer {
     String valueClassName = null;
 
     public HashMapSerializer() {}
@@ -27,7 +27,8 @@ public class HashMapSerializer implements ObjectSerializer{
         return json;
     }
 
-    public Object deSerialize(JSONValue jsonValue) throws JSONException {
+    @Override
+    public Object deSerialize(JSONValue jsonValue, String className) throws JSONException {
         JSONObject jsonObject = jsonValue.isObject();
         if (jsonObject == null) {
             throw new IllegalArgumentException("Json value was not a json object");
@@ -36,12 +37,16 @@ public class HashMapSerializer implements ObjectSerializer{
         HashMap<String,Object> map = new HashMap<String, Object>();
         for (String key : jsonObject.keySet()) {
             if(valueClassName != null){
-                map.put(key, DeserializerHelper.getObject(jsonObject.get(key), valueClassName));
+                map.put(key, DeserializerHelper.getObject(jsonObject.get(key), className));
             } else {
                 map.put(key, DeserializerHelper.getValue(jsonObject.get(key)));
             }
         }
 
         return map;
+    }
+
+    public Object deSerialize(JSONValue jsonValue) throws JSONException {
+        return deSerialize(jsonValue, valueClassName);
     }
 }

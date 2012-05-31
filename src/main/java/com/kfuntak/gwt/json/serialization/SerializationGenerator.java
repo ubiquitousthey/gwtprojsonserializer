@@ -111,7 +111,7 @@ public class SerializationGenerator extends Generator {
 
     private String writeTypeSerializerClass(JClassType typeToSerialize) {
         String serializerName = typeToSerialize.getName().replaceAll("\\.","\\$");
-        writeLn("public class " + serializerName + "_SerializableImpl implements ObjectSerializer{");
+        writeLn("public class " + serializerName + "_SerializableImpl extends AbstractObjectSerializer{");
         indent();
 
         try {
@@ -150,7 +150,7 @@ public class SerializationGenerator extends Generator {
         importsList.add(com.google.gwt.json.client.JSONParser.class.getName());
         importsList.add(com.google.gwt.json.client.JSONException.class.getName());
 //		// Module imports
-        importsList.add(ObjectSerializer.class.getName());
+        importsList.add(AbstractObjectSerializer.class.getName());
         importsList.add(MARKER_INTERFACE.getQualifiedSourceName());
         importsList.add(IncompatibleObjectException.class.getName());
         importsList.add(SerializerHelper.class.getName());
@@ -225,7 +225,7 @@ public class SerializationGenerator extends Generator {
         JClassType baseType = typeOracle.getType(typeName);
         String packageName = baseType.getPackage().getName();
 
-        writeLn("public Object deSerialize(JSONValue jsonValue) throws JSONException{");
+        writeLn("public Object deSerialize(JSONValue jsonValue, String className) throws JSONException{");
         indent();
         // Return null if the given object is null
         writeLn("if(jsonValue instanceof JSONNull){");
