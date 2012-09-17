@@ -423,21 +423,10 @@ public class SerializationGenerator extends Generator {
         writeLn("//deserializeEnum - " + enumType.toString() + " - " + inputValVar);
         String enumVar = "enum" + getLoopVarSuffix();
         JEnumConstant defaultConstant = enumType.getEnumConstants()[0];
-        writeLn(enumType.getSimpleSourceName() + " " + enumVar + " = "+ enumType.getSimpleSourceName() + "." + defaultConstant.getName() +";");
-        writeLn("if(" + inputValVar + " != null && !(" + inputValVar + " instanceof JSONNull)) {");
+        writeLn(enumType.getSimpleSourceName() + " " + enumVar + " = null;");
+        writeLn("if(" + inputValVar + " != null && " + inputValVar + ".isString() != null) {");
         indent();
-        boolean first = true;
-        for (JEnumConstant constant : enumType.getEnumConstants()) {
-            if(!first) {
-                writeLn("else");
-            }
-            first = false;
-            writeLn("if (" + inputValVar + ".isString().stringValue().equals(\"" + constant.getName() + "\")) {");
-            indent();
-            writeLn(enumVar + " = " + enumType.getSimpleSourceName() + "." + constant.getName() + ";");
-            outdent();
-            writeLn("}");
-        }
+        writeLn(enumVar + " = " + enumType.getSimpleSourceName() + ".valueOf(" + inputValVar + ".isString().stringValue());");
         outdent();
         writeLn("}");
         return enumVar;
@@ -447,14 +436,9 @@ public class SerializationGenerator extends Generator {
         writeLn("//Serialize Enum");
         String enumVar = "enum" + getLoopVarSuffix();
         writeLn("JSONValue " + enumVar + " = JSONNull.getInstance();");
-        writeLn("switch(("+ enumType.getSimpleSourceName() +")"+inputValVar+") {");
+        writeLn("if ("+inputValVar+" != null){");
         indent();
-        for (JEnumConstant constant : enumType.getEnumConstants()) {
-            writeLn("case " + constant.getName() + ": ");
-            indent();
-            writeLn(enumVar + " = new JSONString(" + enumType.getSimpleSourceName() + "." + constant.getName() + ".toString());break;");
-            outdent();
-        }
+        writeLn(enumVar + "= new JSONString((("+enumType.getSimpleSourceName()+")"+inputValVar+").name());");
         outdent();
         writeLn("}");
         return enumVar;
