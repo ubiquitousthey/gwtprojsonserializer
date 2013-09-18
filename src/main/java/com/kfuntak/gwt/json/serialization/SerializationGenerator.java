@@ -2,31 +2,30 @@ package com.kfuntak.gwt.json.serialization;
 
 import java.io.PrintWriter;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import com.google.gwt.core.ext.Generator;
 import com.google.gwt.core.ext.GeneratorContext;
 import com.google.gwt.core.ext.TreeLogger;
 import com.google.gwt.core.ext.UnableToCompleteException;
 import com.google.gwt.core.ext.typeinfo.*;
-import com.google.gwt.dev.javac.typemodel.JEnumConstant;
 import com.google.gwt.dev.javac.typemodel.JEnumType;
-import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.rebind.ClassSourceFileComposerFactory;
 import com.google.gwt.user.rebind.SourceWriter;
 import com.kfuntak.gwt.json.serialization.client.*;
 
 public class SerializationGenerator extends Generator {
+    private static final boolean DEBUG = false;
+    private static final Pattern CLASS_DOT = Pattern.compile("\\.");
 
-    private JClassType stringClass;
     private SourceWriter srcWriter;
     private String className;
     private TypeOracle typeOracle;
-    private boolean DEBUG = false;
     private JClassType MARKER_INTERFACE;
     private String indention = "";
     private int suffixIndex = 0;
 
-    public SerializationGenerator() throws NotFoundException {
+    public SerializationGenerator() {
     }
 
     public void writeLn(String code) {
@@ -46,6 +45,7 @@ public class SerializationGenerator extends Generator {
         indention = indention.substring(0, indention.length() - 4);
     }
 
+    @Override
     public String generate(TreeLogger logger, GeneratorContext ctx,
             String requestedClass) throws UnableToCompleteException {
         //get the type oracle
@@ -55,10 +55,9 @@ public class SerializationGenerator extends Generator {
         } catch (NotFoundException e) {
             throw new UnableToCompleteException();
         }
-        assert (typeOracle != null);
         assert (MARKER_INTERFACE != null);
-        stringClass = typeOracle.findType(String.class.getName());
-        assert (stringClass != null);
+        JClassType stringClass = typeOracle.findType(String.class.getName());
+        assert stringClass != null;
 
         //get class from type oracle
         JClassType serializeClass = typeOracle.findType(requestedClass);
@@ -110,7 +109,7 @@ public class SerializationGenerator extends Generator {
     }
 
     private String writeTypeSerializerClass(JClassType typeToSerialize) {
-        String serializerName = typeToSerialize.getName().replaceAll("\\.","\\$");
+        String serializerName = CLASS_DOT.matcher(typeToSerialize.getName()).replaceAll("\\$");
         writeLn("public class " + serializerName + "_SerializableImpl extends AbstractObjectSerializer{");
         indent();
 
@@ -223,7 +222,6 @@ public class SerializationGenerator extends Generator {
     private void generateTypeDeserialization(String typeName) throws NotFoundException, UnableToCompleteException {
 
         JClassType baseType = typeOracle.getType(typeName);
-        String packageName = baseType.getPackage().getName();
 
         writeLn("public Object deSerialize(JSONValue jsonValue, String className) throws JSONException{");
         indent();
@@ -422,7 +420,6 @@ public class SerializationGenerator extends Generator {
     private String deserializeEnum(JEnumType enumType, String inputValVar) {
         writeLn("//deserializeEnum - " + enumType.toString() + " - " + inputValVar);
         String enumVar = "enum" + getLoopVarSuffix();
-        JEnumConstant defaultConstant = enumType.getEnumConstants()[0];
         writeLn(enumType.getSimpleSourceName() + " " + enumVar + " = null;");
         writeLn("if(" + inputValVar + " != null && " + inputValVar + ".isString() != null) {");
         indent();
@@ -564,12 +561,11 @@ public class SerializationGenerator extends Generator {
     }
 
     private String getGetter(JClassType classType, JField field) throws NotFoundException {
-        String getter = null;
         String fieldNameForGS = getNameForGS(field.getName());
         Set<? extends JClassType> classes = classType.getFlattenedSupertypeHierarchy();
 
         if (boxType(field.getType()).getQualifiedSourceName().equals("java.lang.Boolean")) {
-            getter = "is" + fieldNameForGS;
+            String getter = "is" + fieldNameForGS;
             for (JClassType aClass : classes) {
                 JMethod method =  aClass.findMethod(getter, new JType[0]);
                 if (method != null) {
@@ -578,7 +574,7 @@ public class SerializationGenerator extends Generator {
             }
         }
 
-        getter = "get" + fieldNameForGS;
+        String getter = "get" + fieldNameForGS;
         for (JClassType aClass : classes) {
             JMethod method =  aClass.findMethod(getter, new JType[0]);
             if (method != null) {
@@ -674,8 +670,6 @@ public class SerializationGenerator extends Generator {
             return "SerializerHelper.getDate((Date)"+ variable +")";
         } else if (fieldClassType.isAssignableTo(MARKER_INTERFACE)) {
             return "Serializer_TypeSerializer.this.serializeToJson("+ variable +")";
-        } else if (fieldClassType.isEnum() != null) {
-            return variable + ".toString()";
         }
 
         return(variable + ".toString()");
