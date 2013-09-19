@@ -284,4 +284,29 @@ public class SerializerTest extends GWTTestCase {
         university.setRefId("cms");
         return university;
     }
+
+    @Test
+    public void testSerializationAnnotations() {
+        Serializer serializer = (Serializer) GWT.create(Serializer.class);
+        Animal animal = new Animal();
+        animal.name = "Moby";
+        animal.age = 1;
+        animal.refId = null;
+        animal.tricks = null;
+        animal.toys = null;
+        String expectedJson = "{\"name\":\"Moby\", \"age\":1}";
+        assertEquals(expectedJson, serializer.serialize(animal));
+    }
+
+    @Test
+    public void testDeSerializationAnnotations() {
+        Serializer serializer = (Serializer) GWT.create(Serializer.class);
+        String json = "{\"name\":\"Moby\", \"age\":1}";
+        Animal result = (Animal) serializer.deSerialize(json, Animal.class.getName());
+        Animal expectedAnimal = new Animal();
+        expectedAnimal.name = "Moby";
+        expectedAnimal.age = 1;
+        assertEquals(expectedAnimal, result);
+    }
+
 }
