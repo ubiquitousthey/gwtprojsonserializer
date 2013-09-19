@@ -116,7 +116,7 @@ public class SerializationGenerator extends Generator {
 
         try {
             generateTypeSerialization(typeToSerialize);
-            generateTypeDeserialization(typeToSerialize.getQualifiedSourceName());
+            generateTypeDeserialization(typeToSerialize);
 
         } catch (NotFoundException e) {
             e.printStackTrace();
@@ -220,9 +220,9 @@ public class SerializationGenerator extends Generator {
         }
     }
 
-    private void generateTypeDeserialization(String typeName) throws NotFoundException, UnableToCompleteException {
+    private void generateTypeDeserialization(JClassType typeToSerialize) throws NotFoundException, UnableToCompleteException {
 
-        JClassType baseType = typeOracle.getType(typeName);
+        JClassType baseType = typeOracle.getType(typeToSerialize.getQualifiedSourceName());
 
         writeLn("public Object deSerialize(JSONValue jsonValue, String className) throws JSONException{");
         indent();
@@ -275,13 +275,16 @@ public class SerializationGenerator extends Generator {
                 }
             }
         }
-        fields = new JField[allFields.size()];
-        allFields.toArray(fields);
 
-        for (JField field : fields) {
+        SkipMissingDeserializationFields skipMissing = getAnnotation(typeToSerialize, SkipMissingDeserializationFields.class);
+        boolean skipMissingFields = skipMissing != null && skipMissing.value();
+        for (JField field : allFields) {
             JType fieldType = field.getType();
             String fieldName = field.getName();
             writeLn("fieldJsonValue=jsonObject.get(\"" + fieldName + "\");");
+            if(skipMissingFields){
+                writeLn("if(fieldJsonValue != null){");
+            }
             if (fieldType.isPrimitive() != null) {
                 JPrimitiveType fieldPrimitiveType = (JPrimitiveType) fieldType;
                 JClassType fieldBoxedType = typeOracle.getType(fieldPrimitiveType.getQualifiedBoxedSourceName());
@@ -292,6 +295,9 @@ public class SerializationGenerator extends Generator {
                 JClassType fieldClassType = (JClassType) fieldType;
                 String value = deserializeValue(fieldClassType, "fieldJsonValue");
                 setValue("mainResult", baseType, field, value);
+            }
+            if(skipMissingFields){
+                writeLn("}");
             }
         }
 
