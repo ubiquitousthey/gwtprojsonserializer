@@ -1,6 +1,7 @@
 package com.kfuntak.gwt.json.serialization;
 
 import java.io.PrintWriter;
+import java.lang.annotation.Annotation;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -540,7 +541,8 @@ public class SerializationGenerator extends Generator {
             writeLn("mainResult.put(\"" + fieldName + "\"," + value + ");");
         }
 
-        if(!typeToSerialize.isAnnotationPresent(DontSerializeClass.class)){
+        SerializeClassField serializeClass = getAnnotation(typeToSerialize, SerializeClassField.class);
+        if(serializeClass == null || serializeClass.value()){
             // Put class type for compatibility with flex JSON [de]serialisation
             writeLn("mainResult.put(\"class\",new JSONString(\"" + baseType.getQualifiedSourceName() + "\"));");
         }
@@ -684,5 +686,19 @@ public class SerializationGenerator extends Generator {
     private String getLoopVarSuffix() {
         suffixIndex += 1;
         return Integer.toString(suffixIndex);
+    }
+
+    /**
+     * Gets an annotation by searching in the inheritance tree
+     */
+    private <T extends Annotation> T getAnnotation(JClassType type, Class<T> clazz) {
+        while(type != null){
+            T annot = type.getAnnotation(clazz);
+            if(annot != null){
+                return annot;
+            }
+            type = type.getSuperclass();
+        }
+        return null;
     }
 }
