@@ -530,14 +530,18 @@ public class SerializationGenerator extends Generator {
                 }
             }
         }
-        fields = new JField[allFields.size()];
-        allFields.toArray(fields);
-        for (JField field : fields) {
+        SkipNullSerialization skipNulls = getAnnotation(typeToSerialize, SkipNullSerialization.class);
+        boolean skipNullFields = skipNulls != null && skipNulls.value();
+        for (JField field : allFields) {
             JType fieldType = field.getType();
             String fieldName = field.getName();
             assignValue("fieldValue", baseType, field);
             JClassType fieldClassType = boxType(fieldType);
             String value = serializeValue(fieldClassType, "fieldValue");
+
+            if(skipNullFields){
+                writeLn("if(fieldValue != null)");
+            }
             writeLn("mainResult.put(\"" + fieldName + "\"," + value + ");");
         }
 
