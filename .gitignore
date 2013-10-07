@@ -6,3 +6,5 @@ target/
 gwt-unitCache/
 .idea/
 out/
+.classpath
+.settings

@@ -153,8 +153,8 @@ public class DeserializerHelper {
         }
         if (value instanceof JSONString) {
             try {
-                long dateValue = Long.parseLong(((JSONString) value).stringValue());
-                return new Date(dateValue);
+                long adjustedDate  = DeserializationDateHelper.adjustTime(Long.parseLong(((JSONString) value).stringValue()));
+                return new Date(adjustedDate);
             } catch (NumberFormatException e) {
                 throw new JSONException();
             }
