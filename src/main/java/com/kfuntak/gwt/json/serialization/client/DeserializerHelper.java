@@ -193,12 +193,12 @@ public class DeserializerHelper {
 
     private static Object getMap(JSONObject obj) {
         Serializer serializer = GWT.create(Serializer.class);
-        return serializer.deSerialize(obj, "java.util.ArrayList");
+        return serializer.deSerialize(obj, "java.util.HashMap");
     }
 
     private static Object getArrayList(JSONValue value) {
         Serializer serializer = GWT.create(Serializer.class);
-        return serializer.deSerialize(value, "java.util.HashMap");
+        return serializer.deSerialize(value, "java.util.ArrayList");
     }
 
     public static Object getObject(JSONValue value, String elementClassName) {
